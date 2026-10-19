@@ -46,7 +46,7 @@ jobs:
           v=${{ steps.version.outputs.version }}
           git archive --format=tar.gz --prefix="sotto-$v/" -o "dist/sotto-$v.tar.gz" HEAD
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: source
           path: dist/*
@@ -79,7 +79,7 @@ jobs:
           pacman -Qkk sotto
           QT_QPA_PLATFORM=offscreen sotto --version
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: arch
           path: dist/*.pkg.tar.zst
@@ -108,7 +108,7 @@ jobs:
           QT_QPA_PLATFORM=offscreen sotto --version
           ls /usr/lib/sotto /usr/lib/sotto/ggml
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: debian
           path: dist/*.deb
@@ -148,7 +148,7 @@ jobs:
           rpm -V sotto
           QT_QPA_PLATFORM=offscreen sotto --version
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: fedora
           path: dist/*.rpm
@@ -170,7 +170,7 @@ jobs:
           img=$(ls dist/*.AppImage)
           xvfb-run -a "$img" --appimage-extract-and-run --version
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: appimage
           path: dist/*.AppImage
@@ -198,7 +198,7 @@ jobs:
       - name: Release notes
         run: .github/release-notes.sh "${{ needs.source.outputs.version }}" > notes.md
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: github.ref_type != 'tag'
         with:
           name: release
