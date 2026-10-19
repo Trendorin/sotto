@@ -24,7 +24,7 @@ jobs:
           pacman -Syu --noconfirm --needed cmake ninja qt6-base qt6-multimedia qt6-wayland layer-shell-qt \
             whisper-cpp ggml appstream desktop-file-utils
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Build (warnings are errors)
         run: |

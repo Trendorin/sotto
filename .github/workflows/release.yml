@@ -25,7 +25,7 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Version
         id: version
@@ -62,7 +62,7 @@ jobs:
           pacman -Syu --noconfirm --needed cmake ninja qt6-base qt6-multimedia qt6-wayland layer-shell-qt \
             whisper-cpp ggml ggml-vulkan wl-clipboard xdg-desktop-portal polkit hicolor-icon-theme
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Build as an unprivileged user
         run: |
@@ -96,7 +96,7 @@ jobs:
           apt-get install -y --no-install-recommends build-essential cmake ninja-build dpkg-dev git ca-certificates \
             qt6-base-dev qt6-multimedia-dev qt6-wayland-dev liblayershellqtinterface-dev libvulkan-dev glslc spirv-headers
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Build
         run: packaging/deb/build.sh
@@ -125,7 +125,7 @@ jobs:
             qt6-qtbase-devel qt6-qtmultimedia-devel qt6-qtwayland-devel layer-shell-qt-devel \
             vulkan-loader-devel glslc spirv-headers-devel
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/download-artifact@v4
         with:
@@ -158,7 +158,7 @@ jobs:
     needs: source
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Build
         run: sudo SOTTO_SRC="$PWD" SOTTO_WORK="$RUNNER_TEMP/sotto" bash packaging/appimage/inside.sh
@@ -181,7 +181,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/download-artifact@v4
         with:
