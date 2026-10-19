@@ -2,7 +2,7 @@
 %global priv %{_libdir}/sotto
 # The bundled whisper.cpp is private: keep its libraries out of Provides/Requires.
 %global __provides_exclude_from ^%{priv}/.*$
-%global __requires_exclude ^lib(whisper|ggml)
+%global __requires_exclude ^lib(whisper|ggml|parakeet)
 # Keep the run path to the private libraries (Fedora's %%cmake drops it by default).
 %global _cmake_skip_rpath %{nil}
 # ggml builds one CPU backend per instruction set; link-time optimisation only costs time here.

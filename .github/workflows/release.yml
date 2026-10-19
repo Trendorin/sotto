@@ -166,8 +166,9 @@ jobs:
       - name: Run
         run: |
           sudo chown -R "$(id -u):$(id -g)" dist
+          sudo apt-get install -yq xvfb
           img=$(ls dist/*.AppImage)
-          QT_QPA_PLATFORM=offscreen "$img" --appimage-extract-and-run --version
+          xvfb-run -a "$img" --appimage-extract-and-run --version
 
       - uses: actions/upload-artifact@v4
         with:

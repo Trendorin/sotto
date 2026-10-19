@@ -34,7 +34,7 @@ rm -rf "$PKG/usr/share/licenses"
 install -Dm644 LICENSE "$PKG/usr/share/doc/sotto/copyright"
 
 mkdir -p "$STAGE/debian"
-printf 'Source: sotto\n\nPackage: sotto\n' > "$STAGE/debian/control"
+printf 'Source: sotto\n\nPackage: sotto\nArchitecture: any\n' > "$STAGE/debian/control"
 SHLIBS=$(cd "$STAGE" && dpkg-shlibdeps -O --ignore-missing-info -l"sotto$PRIV" \
     -e sotto/usr/bin/sotto $(cd "$STAGE" && ls sotto$PRIV/*.so.* sotto$PRIV/ggml/*.so | sed 's/^/-e /') \
     | sed -n 's/^shlibs:Depends=//p')
