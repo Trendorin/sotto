@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://github.com/Trendorin/sotto#readme
+    about: Installation, usage, models and troubleshooting
+  - name: Report a security vulnerability
+    url: https://github.com/Trendorin/sotto/security/advisories/new
+    about: Please report security problems privately

@@ -1,0 +1,26 @@
+# Maintainer: Trendorin <193045225+Trendorin@users.noreply.github.com>
+#
+# Builds the source tree this file lives in:  cd packaging/arch && makepkg -si
+pkgname=sotto
+pkgver=0.3.0
+pkgrel=1
+pkgdesc='Voice typing for Linux: press a key, speak, the text appears where the cursor is (whisper.cpp, Qt 6)'
+arch=('x86_64')
+url='https://github.com/Trendorin/sotto'
+license=('MIT')
+depends=('qt6-base' 'qt6-multimedia' 'qt6-wayland' 'layer-shell-qt' 'whisper-cpp' 'ggml' 'ggml-vulkan'
+         'wl-clipboard' 'xdg-desktop-portal' 'polkit' 'gcc-libs' 'glibc' 'hicolor-icon-theme')
+makedepends=('cmake' 'ninja')
+optdepends=('ggml-cuda: CUDA acceleration on recent NVIDIA cards')
+options=('!debug')
+
+build() {
+  cmake -B build -S "$startdir/../.." -G Ninja \
+    -DCMAKE_BUILD_TYPE=None \
+    -DCMAKE_INSTALL_PREFIX=/usr
+  cmake --build build
+}
+
+package() {
+  DESTDIR="$pkgdir" cmake --install build
+}

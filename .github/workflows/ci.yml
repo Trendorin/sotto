@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-24.04
+    container: archlinux:base-devel
+    steps:
+      - name: Dependencies
+        run: |
+          pacman -Syu --noconfirm --needed cmake ninja qt6-base qt6-multimedia qt6-wayland layer-shell-qt \
+            whisper-cpp ggml appstream desktop-file-utils
+
+      - uses: actions/checkout@v4
+
+      - name: Build (warnings are errors)
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DSOTTO_WERROR=ON
+          cmake --build build
+
+      - name: Runs in English and Russian
+        run: |
+          QT_QPA_PLATFORM=offscreen SOTTO_LANG=en build/sotto --help | grep -q "Start or stop dictation"
+          QT_QPA_PLATFORM=offscreen SOTTO_LANG=ru build/sotto --help | grep -q "Начать или закончить диктовку"
+
+      - name: Desktop metadata
+        run: |
+          desktop-file-validate data/io.github.trendorin.Sotto.desktop
+          appstreamcli validate --no-net data/io.github.trendorin.Sotto.metainfo.xml
+
+      - name: Scripts parse
+        run: for f in install.sh uninstall.sh packaging/*.sh packaging/*/*.sh .github/release-notes.sh; do bash -n "$f"; done

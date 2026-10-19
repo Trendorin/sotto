@@ -1,0 +1,214 @@
+name: Release
+
+# A pushed tag vX.Y.Z builds every package, installs and runs each one on its own
+# distribution, and publishes them with SHA256SUMS. Run it by hand to get the same
+# files as workflow artifacts without publishing anything.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  WHISPER_VERSION: "1.9.5"
+
+jobs:
+  source:
+    name: Source archive
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Version
+        id: version
+        run: |
+          version=$(sed -n 's/^project(sotto VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if [ "$GITHUB_REF_TYPE" = tag ] && [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match the version $version in CMakeLists.txt"; exit 1
+          fi
+          grep -qx "pkgver=$version" packaging/arch/PKGBUILD
+          grep -Eq "^Version: +$version$" packaging/rpm/sotto.spec
+          grep -q "^## \[$version\]" CHANGELOG.md
+          grep -q "release version=\"$version\"" data/io.github.trendorin.Sotto.metainfo.xml
+
+      - name: Archive
+        run: |
+          mkdir dist
+          v=${{ steps.version.outputs.version }}
+          git archive --format=tar.gz --prefix="sotto-$v/" -o "dist/sotto-$v.tar.gz" HEAD
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: source
+          path: dist/*
+
+  arch:
+    name: Arch Linux package
+    needs: source
+    runs-on: ubuntu-24.04
+    container: archlinux:base-devel
+    steps:
+      - name: Build dependencies
+        run: |
+          pacman -Syu --noconfirm --needed cmake ninja qt6-base qt6-multimedia qt6-wayland layer-shell-qt \
+            whisper-cpp ggml ggml-vulkan wl-clipboard xdg-desktop-portal polkit hicolor-icon-theme
+
+      - uses: actions/checkout@v4
+
+      - name: Build as an unprivileged user
+        run: |
+          useradd -m builder
+          chown -R builder: .
+          cd packaging/arch
+          runuser -u builder -- makepkg --noconfirm --cleanbuild
+          mkdir -p ../../dist
+          mv ./*.pkg.tar.zst ../../dist/
+
+      - name: Install and run
+        run: |
+          pacman -U --noconfirm dist/*.pkg.tar.zst
+          pacman -Qkk sotto
+          QT_QPA_PLATFORM=offscreen sotto --version
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: arch
+          path: dist/*.pkg.tar.zst
+
+  debian:
+    name: Debian package
+    needs: source
+    runs-on: ubuntu-24.04
+    container: debian:trixie
+    steps:
+      - name: Build dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends build-essential cmake ninja-build dpkg-dev git ca-certificates \
+            qt6-base-dev qt6-multimedia-dev qt6-wayland-dev liblayershellqtinterface-dev libvulkan-dev glslc spirv-headers
+
+      - uses: actions/checkout@v4
+
+      - name: Build
+        run: packaging/deb/build.sh
+
+      - name: Install and run
+        run: |
+          apt-get install -y ./dist/sotto_*.deb
+          dpkg -s sotto | grep -E '^(Version|Depends):'
+          QT_QPA_PLATFORM=offscreen sotto --version
+          ls /usr/lib/sotto /usr/lib/sotto/ggml
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: debian
+          path: dist/*.deb
+
+  fedora:
+    name: Fedora package
+    needs: source
+    runs-on: ubuntu-24.04
+    container: fedora:44
+    steps:
+      - name: Build dependencies
+        run: |
+          dnf install -y --setopt=install_weak_deps=False rpm-build cmake ninja-build gcc-c++ \
+            qt6-qtbase-devel qt6-qtmultimedia-devel qt6-qtwayland-devel layer-shell-qt-devel \
+            vulkan-loader-devel glslc spirv-headers-devel
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: source
+          path: dist
+
+      - name: Build
+        run: |
+          mkdir -p ~/rpmbuild/SOURCES
+          cp dist/sotto-*.tar.gz ~/rpmbuild/SOURCES/
+          curl -fsSL --retry 3 -o ~/rpmbuild/SOURCES/whisper.cpp-$WHISPER_VERSION.tar.gz \
+            "https://github.com/ggml-org/whisper.cpp/archive/v$WHISPER_VERSION/whisper.cpp-$WHISPER_VERSION.tar.gz"
+          rpmbuild -bb packaging/rpm/sotto.spec
+          rm dist/*
+          cp ~/rpmbuild/RPMS/x86_64/sotto-[0-9]*.rpm dist/
+
+      - name: Install and run
+        run: |
+          dnf install -y ./dist/sotto-*.rpm
+          rpm -V sotto
+          QT_QPA_PLATFORM=offscreen sotto --version
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fedora
+          path: dist/*.rpm
+
+  appimage:
+    name: AppImage
+    needs: source
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build
+        run: sudo SOTTO_SRC="$PWD" SOTTO_WORK="$RUNNER_TEMP/sotto" bash packaging/appimage/inside.sh
+
+      - name: Run
+        run: |
+          sudo chown -R "$(id -u):$(id -g)" dist
+          img=$(ls dist/*.AppImage)
+          QT_QPA_PLATFORM=offscreen "$img" --appimage-extract-and-run --version
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: appimage
+          path: dist/*.AppImage
+
+  publish:
+    name: Publish
+    needs: [source, arch, debian, fedora, appimage]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Checksums
+        run: |
+          cd dist
+          sha256sum -- * > SHA256SUMS
+          cat SHA256SUMS
+
+      - name: Release notes
+        run: .github/release-notes.sh "${{ needs.source.outputs.version }}" > notes.md
+
+      - uses: actions/upload-artifact@v4
+        if: github.ref_type != 'tag'
+        with:
+          name: release
+          path: |
+            dist/*
+            notes.md
+
+      - name: Publish
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/* --verify-tag \
+            --title "Sotto ${{ needs.source.outputs.version }}" --notes-file notes.md
