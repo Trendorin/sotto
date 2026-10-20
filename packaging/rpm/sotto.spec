@@ -72,5 +72,5 @@ rm -rf %{buildroot}%{_datadir}/licenses
 * Tue Oct 20 2026 Trendorin <193045225+Trendorin@users.noreply.github.com> - 1.1.1-1
 - Download log and custom model server, security fixes, smooth dragging of the indicator
 
-* Tue Oct 20 2026 Trendorin <193045225+Trendorin@users.noreply.github.com> - 1.1.0-1
+* Tue Oct 20 2026 Trendorin <193045225+Trendorin@users.noreply.github.com> - 1.0.0-1
 - First stable release
