@@ -81,16 +81,46 @@ Transcriber::~Transcriber()
         whisper_free(m_ctx);
 }
 
+struct Gpu {
+    int index = -1; // among ggml's GPUs, the numbering of whisper_context_params::gpu_device
+    QString name;
+};
+
+// whisper.cpp takes the first GPU ggml lists, and on laptops with two the integrated one usually
+// comes first. Prefer a discrete GPU, then the one with more memory.
+static const Gpu &preferredGpu()
+{
+    static const Gpu gpu = [] {
+        loadBackends();
+        Gpu best;
+        bool bestDiscrete = false;
+        size_t bestMemory = 0;
+        int index = 0;
+        for (size_t i = 0; i < ggml_backend_dev_count(); ++i) {
+            ggml_backend_dev_t dev = ggml_backend_dev_get(i);
+            const auto type = ggml_backend_dev_type(dev);
+            if (type != GGML_BACKEND_DEVICE_TYPE_GPU && type != GGML_BACKEND_DEVICE_TYPE_IGPU)
+                continue;
+            const bool discrete = type == GGML_BACKEND_DEVICE_TYPE_GPU;
+            size_t free = 0, total = 0;
+            ggml_backend_dev_memory(dev, &free, &total);
+            const QString name = QString::fromUtf8(ggml_backend_dev_description(dev));
+            qCInfo(lcSotto) << "gpu" << index << name << (discrete ? "discrete" : "integrated") << total / (1024 * 1024) << "MiB";
+            if (best.index < 0 || discrete > bestDiscrete || (discrete == bestDiscrete && total > bestMemory)) {
+                best = {index, name};
+                bestDiscrete = discrete;
+                bestMemory = total;
+            }
+            ++index;
+        }
+        return best;
+    }();
+    return gpu;
+}
+
 QString Transcriber::gpuName()
 {
-    loadBackends();
-    for (size_t i = 0; i < ggml_backend_dev_count(); ++i) {
-        ggml_backend_dev_t dev = ggml_backend_dev_get(i);
-        const auto type = ggml_backend_dev_type(dev);
-        if (type == GGML_BACKEND_DEVICE_TYPE_GPU || type == GGML_BACKEND_DEVICE_TYPE_IGPU)
-            return QString::fromUtf8(ggml_backend_dev_description(dev));
-    }
-    return {};
+    return preferredGpu().name;
 }
 
 void Transcriber::preload(const QString &modelPath, bool gpu)
@@ -126,6 +156,7 @@ bool Transcriber::ensureLoaded(const QString &modelPath, bool gpu, QString *erro
     loadBackends();
     whisper_context_params params = whisper_context_default_params();
     params.use_gpu = gpu;
+    params.gpu_device = std::max(preferredGpu().index, 0);
     QElapsedTimer timer;
     timer.start();
     m_ctx = whisper_init_from_file_with_params(modelPath.toLocal8Bit().constData(), params);

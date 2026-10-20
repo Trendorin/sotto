@@ -5,6 +5,13 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.2.2] — 2026-10-21
+
+### Fixed
+- On laptops with both an integrated and a discrete GPU, recognition ran on the integrated one: whisper.cpp
+  takes the first GPU in the list, and the integrated one usually comes first. Sotto now picks the discrete
+  GPU (among several of the same kind, the one with more memory), and the settings name the GPU it uses.
+
 ## [1.2.1] — 2026-10-20
 
 ### Fixed
@@ -79,7 +86,8 @@ First public release. Compared with the private 0.x builds:
   any other AppImage inherit it, so a packaged Sotto could point its menu entry at, or remove,
   someone else's AppImage. Sotto now checks that it really runs from inside that AppImage.
 
-[Unreleased]: https://github.com/Trendorin/sotto/compare/v1.2.1...HEAD
+[Unreleased]: https://github.com/Trendorin/sotto/compare/v1.2.2...HEAD
+[1.2.2]: https://github.com/Trendorin/sotto/releases/tag/v1.2.2
 [1.2.1]: https://github.com/Trendorin/sotto/releases/tag/v1.2.1
 [1.2.0]: https://github.com/Trendorin/sotto/releases/tag/v1.2.0
 [1.1.0]: https://github.com/Trendorin/sotto/releases/tag/v1.1.0

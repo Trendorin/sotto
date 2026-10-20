@@ -6,7 +6,7 @@
 
 Voice typing for Linux, local and fast.
 
-[![Release](https://img.shields.io/badge/release-v1.2.1-e0475e)](https://github.com/Trendorin/sotto/releases/latest)
+[![Release](https://img.shields.io/badge/release-v1.2.2-e0475e)](https://github.com/Trendorin/sotto/releases/latest)
 [![License](https://img.shields.io/badge/license-MIT-e0475e)](LICENSE)
 ![whisper.cpp](https://img.shields.io/badge/whisper.cpp-1.9.5-e0475e)
 ![Platform](https://img.shields.io/badge/platform-Linux-e0475e)
@@ -39,16 +39,16 @@ whisper.cpp and pastes the result into the active window.
 
 | your system | file from the [latest release](https://github.com/Trendorin/sotto/releases/latest) |
 |---|---|
-| Arch Linux, CachyOS, Manjaro | `sotto-1.2.1-1-x86_64.pkg.tar.zst` |
-| Debian 13 and newer | `sotto_1.2.1-1_amd64.deb` |
-| Fedora 44 and newer | `sotto-1.2.1-1.fc44.x86_64.rpm` |
-| any distribution with glibc 2.35+ | `Sotto-1.2.1-x86_64.AppImage` |
+| Arch Linux, CachyOS, Manjaro | `sotto-1.2.2-1-x86_64.pkg.tar.zst` |
+| Debian 13 and newer | `sotto_1.2.2-1_amd64.deb` |
+| Fedora 44 and newer | `sotto-1.2.2-1.fc44.x86_64.rpm` |
+| any distribution with glibc 2.35+ | `Sotto-1.2.2-x86_64.AppImage` |
 
 ```sh
-sudo pacman -U ./sotto-1.2.1-1-x86_64.pkg.tar.zst    # Arch
-sudo apt install ./sotto_1.2.1-1_amd64.deb            # Debian
-sudo dnf install ./sotto-1.2.1-1.fc44.x86_64.rpm      # Fedora
-chmod +x Sotto-1.2.1-x86_64.AppImage && ./Sotto-1.2.1-x86_64.AppImage
+sudo pacman -U ./sotto-1.2.2-1-x86_64.pkg.tar.zst    # Arch
+sudo apt install ./sotto_1.2.2-1_amd64.deb            # Debian
+sudo dnf install ./sotto-1.2.2-1.fc44.x86_64.rpm      # Fedora
+chmod +x Sotto-1.2.2-x86_64.AppImage && ./Sotto-1.2.2-x86_64.AppImage
 ```
 
 Every package is built in a clean container of its distribution, then installed and started

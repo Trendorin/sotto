@@ -17,7 +17,7 @@ body:
     id: version
     attributes:
       label: Sotto version and how you installed it
-      placeholder: e.g. 1.2.1, Fedora package / AppImage
+      placeholder: e.g. 1.2.2, Fedora package / AppImage
     validations:
       required: true
   - type: input
