@@ -42,4 +42,5 @@ sotto --uninstall   # remove Sotto
 sotto --quit        # quit the running copy
 ```
 
-`SOTTO_LANG=en` or `SOTTO_LANG=ru` overrides the interface language.
+The interface language is chosen in **Settings → General → Interface language** (English, Russian or
+follow the system; it applies after a restart). `SOTTO_LANG=en` or `SOTTO_LANG=ru` overrides it for one run.

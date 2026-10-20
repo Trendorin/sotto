@@ -5,6 +5,13 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.2.0] — 2026-10-20
+
+### Added
+- **Interface language** (Settings → General): follow the system, English or Russian; applies after a
+  restart. `SOTTO_LANG=en` or `ru` still overrides it for one run.
+
+
 ## [1.1.0] — 2026-10-20
 
 New: a visible, replaceable model source and a download log. Security fixes after an independent review.
@@ -64,6 +71,7 @@ First public release. Compared with the private 0.x builds:
   any other AppImage inherit it, so a packaged Sotto could point its menu entry at, or remove,
   someone else's AppImage. Sotto now checks that it really runs from inside that AppImage.
 
-[Unreleased]: https://github.com/Trendorin/sotto/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/Trendorin/sotto/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/Trendorin/sotto/releases/tag/v1.2.0
 [1.1.0]: https://github.com/Trendorin/sotto/releases/tag/v1.1.0
 [1.0.0]: https://github.com/Trendorin/sotto/releases/tag/v1.0.0

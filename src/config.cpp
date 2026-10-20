@@ -28,6 +28,9 @@ static void set(const char *key, const QVariant &value)
 QString model() { return get("model").toString(); }
 void setModel(const QString &id) { set("model", id); }
 
+QString uiLanguage() { return get("uiLanguage", QStringLiteral("auto")).toString(); }
+void setUiLanguage(const QString &code) { set("uiLanguage", code); }
+
 QString language() { return get("language", QStringLiteral("auto")).toString(); }
 void setLanguage(const QString &code) { set("language", code); }
 

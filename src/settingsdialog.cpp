@@ -174,6 +174,11 @@ SettingsDialog::SettingsDialog(ModelDownloader *downloader, GlobalShortcut *shor
     // General
     auto *general = new QGroupBox(tr("General"));
     auto *genForm = new QFormLayout(general);
+    m_uiLanguage = new QComboBox;
+    m_uiLanguage->addItem(tr("Follow system"), QStringLiteral("auto"));
+    m_uiLanguage->addItem(QStringLiteral("English"), QStringLiteral("en"));
+    m_uiLanguage->addItem(QStringLiteral("Русский"), QStringLiteral("ru"));
+    genForm->addRow(tr("Interface language:"), m_uiLanguage);
     m_autostart = new QCheckBox(tr("Start at login"));
     genForm->addRow(QString(), m_autostart);
     m_unload = new QSpinBox;
@@ -288,6 +293,7 @@ void SettingsDialog::load()
     (Config::autoPaste() ? m_paste : m_copyOnly)->setChecked(true);
     m_pasteKeys->setEnabled(Config::autoPaste());
     m_pasteKeys->setCurrentIndex(std::max(0, m_pasteKeys->findData(Config::pasteKeys())));
+    m_uiLanguage->setCurrentIndex(std::max(0, m_uiLanguage->findData(Config::uiLanguage())));
     m_autostart->setChecked(Config::autostart());
     m_unload->setValue(Config::unloadMinutes());
 }
@@ -395,6 +401,10 @@ void SettingsDialog::accept()
     Config::setPasteKeys(m_pasteKeys->currentData().toString());
     if (m_autostart->isChecked() != Config::autostart())
         Config::setAutostart(m_autostart->isChecked());
+    if (m_uiLanguage->currentData().toString() != Config::uiLanguage()) {
+        Config::setUiLanguage(m_uiLanguage->currentData().toString());
+        QMessageBox::information(this, tr("Interface language"), tr("Restart Sotto to apply the language."));
+    }
     Config::setUnloadMinutes(m_unload->value());
     Config::setUseVad(m_vad->isChecked());
     Config::setModelSource(m_source->currentData().toString());

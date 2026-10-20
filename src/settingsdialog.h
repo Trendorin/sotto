@@ -65,6 +65,7 @@ private:
     QLabel *m_pasteAccess;
     QPushButton *m_pasteAccessButton;
 
+    QComboBox *m_uiLanguage;
     QCheckBox *m_autostart;
     QSpinBox *m_unload;
 };

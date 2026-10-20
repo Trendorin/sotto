@@ -6,7 +6,7 @@
 
 Голосовой ввод для Linux, локально и быстро.
 
-[![Релиз](https://img.shields.io/badge/release-v1.1.0-e0475e)](https://github.com/Trendorin/sotto/releases/latest)
+[![Релиз](https://img.shields.io/badge/release-v1.2.0-e0475e)](https://github.com/Trendorin/sotto/releases/latest)
 [![Лицензия](https://img.shields.io/badge/license-MIT-e0475e)](LICENSE)
 ![whisper.cpp](https://img.shields.io/badge/whisper.cpp-1.9.5-e0475e)
 ![Платформа](https://img.shields.io/badge/platform-Linux-e0475e)
@@ -39,16 +39,16 @@
 
 | ваша система | файл из [последнего релиза](https://github.com/Trendorin/sotto/releases/latest) |
 |---|---|
-| Arch Linux, CachyOS, Manjaro | `sotto-1.1.0-1-x86_64.pkg.tar.zst` |
-| Debian 13 и новее | `sotto_1.1.0-1_amd64.deb` |
-| Fedora 44 и новее | `sotto-1.1.0-1.fc44.x86_64.rpm` |
-| любой дистрибутив с glibc 2.35+ | `Sotto-1.1.0-x86_64.AppImage` |
+| Arch Linux, CachyOS, Manjaro | `sotto-1.2.0-1-x86_64.pkg.tar.zst` |
+| Debian 13 и новее | `sotto_1.2.0-1_amd64.deb` |
+| Fedora 44 и новее | `sotto-1.2.0-1.fc44.x86_64.rpm` |
+| любой дистрибутив с glibc 2.35+ | `Sotto-1.2.0-x86_64.AppImage` |
 
 ```sh
-sudo pacman -U ./sotto-1.1.0-1-x86_64.pkg.tar.zst    # Arch
-sudo apt install ./sotto_1.1.0-1_amd64.deb            # Debian
-sudo dnf install ./sotto-1.1.0-1.fc44.x86_64.rpm      # Fedora
-chmod +x Sotto-1.1.0-x86_64.AppImage && ./Sotto-1.1.0-x86_64.AppImage
+sudo pacman -U ./sotto-1.2.0-1-x86_64.pkg.tar.zst    # Arch
+sudo apt install ./sotto_1.2.0-1_amd64.deb            # Debian
+sudo dnf install ./sotto-1.2.0-1.fc44.x86_64.rpm      # Fedora
+chmod +x Sotto-1.2.0-x86_64.AppImage && ./Sotto-1.2.0-x86_64.AppImage
 ```
 
 Каждый пакет собирается в чистом контейнере своего дистрибутива, затем ставится и запускается

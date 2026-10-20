@@ -13,7 +13,9 @@ inline constexpr auto AppId = "io.github.trendorin.Sotto";
 QString model();               // empty = not chosen yet
 void setModel(const QString &id);
 
-QString language();            // "auto" or ISO code
+QString uiLanguage();          // interface language: "auto", "en" or "ru" (applies at the next start)
+void setUiLanguage(const QString &code);
+QString language();            // speech recognition language: "auto" or ISO code
 void setLanguage(const QString &code);
 
 bool useGpu();

@@ -1,4 +1,5 @@
 #include "i18n.h"
+#include "config.h"
 
 #include <QCoreApplication>
 #include <QHash>
@@ -89,6 +90,10 @@ const QHash<QString, QString> &russian()
     {"Sotto — voice typing", "Sotto — голосовой ввод"},
     {"Sotto — voice typing with whisper.cpp", "Sotto — голосовой ввод на whisper.cpp"},
     {"Source:", "Источник:"},
+    {"Follow system", "Как в системе"},
+    {"Interface language:", "Язык интерфейса:"},
+    {"Interface language", "Язык интерфейса"},
+    {"Restart Sotto to apply the language.", "Перезапустите Sotto, чтобы применить язык."},
     {"Custom server…", "Свой сервер…"},
     {"Server:", "Сервер:"},
     {"https://your-server.example/ (same layout as huggingface.co)", "https://ваш-сервер.example/ (структура как у huggingface.co)"},
@@ -173,8 +178,11 @@ namespace I18n {
 
 void install(QCoreApplication &app)
 {
+    // SOTTO_LANG wins, then the setting; "auto" follows the system language.
     const QString forced = qEnvironmentVariable("SOTTO_LANG");
-    const bool ru = forced.isEmpty() ? QLocale().language() == QLocale::Russian : forced.startsWith(QLatin1String("ru"));
+    const QString choice = forced.isEmpty() ? Config::uiLanguage() : forced;
+    const bool ru = choice == QLatin1String("auto") || choice.isEmpty() ? QLocale().language() == QLocale::Russian
+                                                                         : choice.startsWith(QLatin1String("ru"));
     if (!ru)
         return;
     static Translator translator(russian());
