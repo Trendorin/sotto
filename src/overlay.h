@@ -49,6 +49,9 @@ private:
     QScreen *targetScreen() const;
     QPoint topLeftFor(QPointF fraction) const;
     void place(QPoint topLeft);
+    QSize pillWindowSize() const;
+    void beginGrab();
+    void endGrab();
     void paintWave(QPainter &p, const QRectF &area);
 
     Mode m_mode = Mode::Recording;
@@ -74,4 +77,10 @@ private:
     QPoint m_pressPos;
     bool m_pressed = false;
     bool m_dragged = false;
+    // While dragging with layer-shell the surface covers the screen and the pill is painted at
+    // m_topLeft: pointer coordinates are then screen coordinates and nothing depends on when the
+    // compositor applies a move. Moving a small surface by margins made every event relative to a
+    // surface that had not moved yet, which showed as jitter.
+    bool m_grabbing = false;
+    QElapsedTimer m_grabClock;
 };

@@ -23,7 +23,7 @@ Overlay::Overlay(QWidget *parent)
 {
     setAttribute(Qt::WA_TranslucentBackground);
     setAttribute(Qt::WA_ShowWithoutActivating);
-    setFixedSize(PillSize + QSize(2 * ShadowMargin, 2 * ShadowMargin));
+    setFixedSize(pillWindowSize());
     setWindowTitle(QStringLiteral("Sotto"));
 
     const bool wayland = QGuiApplication::platformName() == QLatin1String("wayland");
@@ -56,6 +56,7 @@ Overlay::Overlay(QWidget *parent)
     });
     connect(&m_fade, &QVariantAnimation::finished, this, [this] {
         if (m_opacity <= 0.0) {
+            endGrab();
             hide();
             m_frame.stop();
         }
@@ -163,13 +164,42 @@ QScreen *Overlay::targetScreen() const
     return QGuiApplication::primaryScreen();
 }
 
+QSize Overlay::pillWindowSize() const
+{
+    return PillSize + QSize(2 * ShadowMargin, 2 * ShadowMargin);
+}
+
 QPoint Overlay::topLeftFor(QPointF fraction) const
 {
     const QSize screen = targetScreen()->geometry().size();
-    const int x = qRound(fraction.x() * screen.width() - width() / 2.0);
-    const int y = qRound(fraction.y() * screen.height() - height() / 2.0);
-    return {std::clamp(x, 0, std::max(0, screen.width() - width())),
-            std::clamp(y, 0, std::max(0, screen.height() - height()))};
+    const QSize own = pillWindowSize();
+    const int x = qRound(fraction.x() * screen.width() - own.width() / 2.0);
+    const int y = qRound(fraction.y() * screen.height() - own.height() / 2.0);
+    return {std::clamp(x, 0, std::max(0, screen.width() - own.width())),
+            std::clamp(y, 0, std::max(0, screen.height() - own.height()))};
+}
+
+void Overlay::beginGrab()
+{
+#ifdef SOTTO_HAVE_LAYERSHELL
+    if (!m_layer || m_grabbing)
+        return;
+    m_grabbing = true;
+    m_grabClock.start();
+    m_layer->setMargins(QMargins());
+    setFixedSize(targetScreen()->geometry().size());
+#endif
+}
+
+void Overlay::endGrab()
+{
+#ifdef SOTTO_HAVE_LAYERSHELL
+    if (!m_grabbing)
+        return;
+    m_grabbing = false;
+    m_layer->setMargins(QMargins(m_topLeft.x(), m_topLeft.y(), 0, 0));
+    setFixedSize(pillWindowSize());
+#endif
 }
 
 void Overlay::place(QPoint topLeft)
@@ -177,7 +207,10 @@ void Overlay::place(QPoint topLeft)
     m_topLeft = topLeft;
 #ifdef SOTTO_HAVE_LAYERSHELL
     if (m_layer) {
-        m_layer->setMargins(QMargins(topLeft.x(), topLeft.y(), 0, 0));
+        if (m_grabbing)
+            update(); // the pill is painted at m_topLeft inside the big surface
+        else
+            m_layer->setMargins(QMargins(topLeft.x(), topLeft.y(), 0, 0));
         return;
     }
 #endif
@@ -191,7 +224,8 @@ void Overlay::paintEvent(QPaintEvent *)
     p.setOpacity(m_opacity);
 
     const QPalette pal = palette();
-    const QRectF pill = QRectF(rect()).adjusted(ShadowMargin, ShadowMargin, -ShadowMargin, -ShadowMargin);
+    const QRectF own(m_grabbing ? QPointF(m_topLeft) : QPointF(0, 0), QSizeF(pillWindowSize()));
+    const QRectF pill = own.adjusted(ShadowMargin, ShadowMargin, -ShadowMargin, -ShadowMargin);
     const qreal radius = pill.height() / 2;
 
     // Soft shadow: stacked translucent rounded rects.
@@ -317,12 +351,27 @@ void Overlay::mouseMoveEvent(QMouseEvent *event)
         m_dragged = true;
         return;
     }
-    m_dragged = true;
-    // The surface follows the cursor, so local coordinates snap back towards
-    // m_pressPos once the compositor applies each move.
     const QSize screen = targetScreen()->geometry().size();
-    place({std::clamp(m_topLeft.x() + delta.x(), 0, screen.width() - width()),
-           std::clamp(m_topLeft.y() + delta.y(), 0, screen.height() - height())});
+    const QSize own = pillWindowSize();
+    if (m_layer) {
+        if (!m_grabbing) {
+            m_dragged = true;
+            beginGrab();
+            return;
+        }
+        // Wait until the compositor has resized the surface; until then the pointer is still
+        // reported in the old, small surface and would throw the pill into the corner.
+        if (m_grabClock.elapsed() < 120)
+            return;
+        const QPoint cursor = event->position().toPoint();
+        place({std::clamp(cursor.x() - m_pressPos.x(), 0, screen.width() - own.width()),
+               std::clamp(cursor.y() - m_pressPos.y(), 0, screen.height() - own.height())});
+        return;
+    }
+    m_dragged = true;
+    // Plain X11 window: the move is applied at once, so local coordinates snap back towards m_pressPos.
+    place({std::clamp(m_topLeft.x() + delta.x(), 0, screen.width() - own.width()),
+           std::clamp(m_topLeft.y() + delta.y(), 0, screen.height() - own.height())});
 }
 
 void Overlay::mouseReleaseEvent(QMouseEvent *event)
@@ -331,10 +380,12 @@ void Overlay::mouseReleaseEvent(QMouseEvent *event)
         return;
     m_pressed = false;
     if (m_dragged) {
+        endGrab();
         if (m_canPosition) {
             const QSize screen = targetScreen()->geometry().size();
-            Config::setOverlayPosition({(m_topLeft.x() + width() / 2.0) / screen.width(),
-                                        (m_topLeft.y() + height() / 2.0) / screen.height()});
+            const QSize own = pillWindowSize();
+            Config::setOverlayPosition({(m_topLeft.x() + own.width() / 2.0) / screen.width(),
+                                        (m_topLeft.y() + own.height() / 2.0) / screen.height()});
         }
         return;
     }
