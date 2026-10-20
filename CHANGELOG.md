@@ -7,14 +7,6 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [1.1.1] — 2026-10-20
 
-### Fixed
-- Dragging the recording indicator no longer jerks. On Wayland with layer-shell the compositor applies a
-  move a moment after it is requested, and every pointer event was measured against a surface that had not
-  moved yet. While you drag, the surface now covers the screen and the indicator is drawn where the
-  pointer is; when you let go it shrinks back to its new place.
-
-## [1.1.0] — 2026-10-20
-
 New: a visible, replaceable model source and a download log. Security fixes after an independent review.
 
 ### Added
@@ -39,7 +31,10 @@ New: a visible, replaceable model source and a download log. Security fixes afte
   every recording is now its own job.
 - First start of the indicator on X11, GNOME Wayland or without layer-shell dereferenced a null window.
 - A rejected recording (too short, silence) left the model loaded forever instead of unloading it.
-
+- Dragging the recording indicator no longer jerks. On Wayland with layer-shell the compositor applies a
+  move a moment after it is requested, and every pointer event was measured against a surface that had not
+  moved yet. While you drag, the surface now covers the screen and the indicator is drawn where the
+  pointer is; when you let go it shrinks back to its new place.
 
 ## [1.0.0] — 2026-10-20
 
@@ -71,5 +66,4 @@ First public release. Compared with the private 0.x builds:
 
 [Unreleased]: https://github.com/Trendorin/sotto/compare/v1.1.1...HEAD
 [1.1.1]: https://github.com/Trendorin/sotto/releases/tag/v1.1.1
-[1.1.0]: https://github.com/Trendorin/sotto/releases/tag/v1.1.0
 [1.0.0]: https://github.com/Trendorin/sotto/releases/tag/v1.0.0
