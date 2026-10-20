@@ -207,6 +207,7 @@ void App::stopRecording()
     if (pcm.size() < size_t(Recorder::SampleRate) / 4) {
         m_overlay->dismiss();
         setState(State::Idle);
+        scheduleUnload();
         return;
     }
     const float peak = peakRms(pcm);
@@ -214,6 +215,7 @@ void App::stopRecording()
     if (peak < 0.004f) {
         m_overlay->showMessage(tr("No speech heard — check the microphone"), true);
         setState(State::Idle);
+        scheduleUnload();
         return;
     }
 
@@ -260,6 +262,7 @@ void App::onError(const QString &message)
     if (m_state == State::Recording)
         m_recorder->stop();
     setState(State::Idle);
+    scheduleUnload();
     m_overlay->showMessage(message, true);
 }
 

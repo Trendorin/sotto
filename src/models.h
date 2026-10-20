@@ -38,7 +38,14 @@ QStringList customIds();            // extra ggml-*.bin files dropped into the f
 QString dir();
 QString path(const QString &id);    // also accepts VadId
 QString url(const QString &id);     // download URL from the configured source
+QString url(const QString &id, const QString &host); // the same on a given server (a download keeps the one it started with)
+QString baseUrl();                  // the configured server, empty if the custom one is not valid
 QString pageUrl();                  // human-readable model page on the configured source
+QString sourceTitle();              // name of the configured source
+bool customSource();                // the "custom" source is selected
+bool customUrlValid(const QString &url); // https://…, or http:// for localhost only
+bool verifyChecksums();             // false only for a custom source the user chose not to verify
+QString logFile();                  // download.log next to the models
 bool isInstalled(const QString &id);
 QString recommended(bool haveGpu);
 } // namespace Models
@@ -56,12 +63,14 @@ public:
     QString current() const { return m_main; }
 
 Q_SIGNALS:
+    void log(const QString &line);   // what is being downloaded, from where, and the result
     void progress(qint64 received, qint64 total);
     void finished(const QString &id, bool ok, const QString &error);
 
 private:
     void next();
     void done(bool ok, const QString &error);
+    void note(const QString &line);
 
     QNetworkAccessManager *m_nam = nullptr;
     QPointer<QNetworkReply> m_reply;
@@ -69,4 +78,9 @@ private:
     QCryptographicHash m_hash{QCryptographicHash::Sha256};
     QString m_main;
     QStringList m_queue;
+    // What the download started with: changing the source or the checksum option in the settings
+    // while it runs must not change where it comes from or how it is checked.
+    QString m_host;
+    QString m_sourceTitle;
+    bool m_verify = true;
 };

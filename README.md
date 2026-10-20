@@ -6,7 +6,7 @@
 
 Voice typing for Linux, local and fast.
 
-[![Release](https://img.shields.io/badge/release-v1.0.0-e0475e)](https://github.com/Trendorin/sotto/releases/latest)
+[![Release](https://img.shields.io/badge/release-v1.1.0-e0475e)](https://github.com/Trendorin/sotto/releases/latest)
 [![License](https://img.shields.io/badge/license-MIT-e0475e)](LICENSE)
 ![whisper.cpp](https://img.shields.io/badge/whisper.cpp-1.9.5-e0475e)
 ![Platform](https://img.shields.io/badge/platform-Linux-e0475e)
@@ -15,7 +15,7 @@ Voice typing for Linux, local and fast.
 
 </div>
 
-<p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset=".github/assets/screenshot-dark.png"><img src=".github/assets/screenshot-light.png" width="620" alt="Sotto settings: model, source, language, GPU, silence filter and vocabulary"></picture></p>
+<p align="center"><img src=".github/assets/screenshot.png" width="620" alt="Sotto settings: model, source, language, GPU, silence filter and vocabulary"></p>
 
 Press a key, speak, and the text appears where the cursor is. Sotto (as in *sotto voce*) lives in
 the tray, listens only while you hold or toggle its key, recognises speech on your computer with
@@ -29,8 +29,8 @@ whisper.cpp and pastes the result into the active window.
 - Made for Wayland: the hotkey comes from the GlobalShortcuts portal and pasting goes through the
   RemoteDesktop portal. No root and no `ydotool`. X11 works too.
 - Silero VAD cuts silence first, so whisper does not invent text on a quiet recording.
-- Models are downloaded from Hugging Face or a mirror and kept only if the size and SHA-256
-  match.
+- Models are downloaded from Hugging Face, a mirror or your own server, with a visible download log,
+  and kept only if the size and SHA-256 match.
 - C++ and Qt 6 widgets in your system theme. A few megabytes when idle; the model is unloaded
   after a while without use.
 - English and Russian interface, picked from the system language.
@@ -39,16 +39,16 @@ whisper.cpp and pastes the result into the active window.
 
 | your system | file from the [latest release](https://github.com/Trendorin/sotto/releases/latest) |
 |---|---|
-| Arch Linux, CachyOS, Manjaro | `sotto-1.0.0-1-x86_64.pkg.tar.zst` |
-| Debian 13 and newer | `sotto_1.0.0-1_amd64.deb` |
-| Fedora 44 and newer | `sotto-1.0.0-1.fc44.x86_64.rpm` |
-| any distribution with glibc 2.35+ | `Sotto-1.0.0-x86_64.AppImage` |
+| Arch Linux, CachyOS, Manjaro | `sotto-1.1.0-1-x86_64.pkg.tar.zst` |
+| Debian 13 and newer | `sotto_1.1.0-1_amd64.deb` |
+| Fedora 44 and newer | `sotto-1.1.0-1.fc44.x86_64.rpm` |
+| any distribution with glibc 2.35+ | `Sotto-1.1.0-x86_64.AppImage` |
 
 ```sh
-sudo pacman -U ./sotto-1.0.0-1-x86_64.pkg.tar.zst    # Arch
-sudo apt install ./sotto_1.0.0-1_amd64.deb            # Debian
-sudo dnf install ./sotto-1.0.0-1.fc44.x86_64.rpm      # Fedora
-chmod +x Sotto-1.0.0-x86_64.AppImage && ./Sotto-1.0.0-x86_64.AppImage
+sudo pacman -U ./sotto-1.1.0-1-x86_64.pkg.tar.zst    # Arch
+sudo apt install ./sotto_1.1.0-1_amd64.deb            # Debian
+sudo dnf install ./sotto-1.1.0-1.fc44.x86_64.rpm      # Fedora
+chmod +x Sotto-1.1.0-x86_64.AppImage && ./Sotto-1.1.0-x86_64.AppImage
 ```
 
 Every package is built in a clean container of its distribution, then installed and started
@@ -100,7 +100,9 @@ sotto --start | --stop | --cancel | --settings | --uninstall | --quit
 Whisper models come from [huggingface.co/ggerganov/whisper.cpp](https://huggingface.co/ggerganov/whisper.cpp)
 and Silero VAD from [huggingface.co/ggml-org/whisper-vad](https://huggingface.co/ggml-org/whisper-vad),
 both MIT. If Hugging Face is unreachable, switch **Source** to the [hf-mirror.com](https://hf-mirror.com)
-mirror. You can also put your own `ggml-*.bin` into `~/.local/share/sotto/models/`.
+mirror, or to your own server (**Custom server…**). The settings show a download log with the exact
+URL and where the file really comes from. You can also put your own `ggml-*.bin` into
+`~/.local/share/sotto/models/`.
 
 ## How it works
 

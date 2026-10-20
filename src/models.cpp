@@ -2,7 +2,9 @@
 #include "config.h"
 #include "log.h"
 
+#include <QDateTime>
 #include <QDir>
+#include <QUrl>
 #include <QNetworkAccessManager>
 #include <QStandardPaths>
 
@@ -34,17 +36,52 @@ const QList<ModelSource> &sources()
     static const QList<ModelSource> list{
         {QStringLiteral("huggingface"), QStringLiteral("Hugging Face"), QStringLiteral("https://huggingface.co")},
         {QStringLiteral("hf-mirror"), QObject::tr("Mirror hf-mirror.com"), QStringLiteral("https://hf-mirror.com")},
+        {QStringLiteral("custom"), QObject::tr("Custom server…"), QString()},
     };
     return list;
 }
 
+bool customUrlValid(const QString &url)
+{
+    const QUrl u(url, QUrl::StrictMode);
+    if (!u.isValid() || u.host().isEmpty() || !u.userInfo().isEmpty() || !u.query().isEmpty() || !u.fragment().isEmpty())
+        return false;
+    if (u.scheme() == QLatin1String("https"))
+        return true;
+    const QString h = u.host();
+    return u.scheme() == QLatin1String("http") && (h == QLatin1String("localhost") || h == QLatin1String("127.0.0.1") || h == QLatin1String("::1"));
+}
+
+bool customSource() { return Config::modelSource() == QLatin1String("custom"); }
+
+bool verifyChecksums() { return !(customSource() && Config::allowUnverified()); }
+
 static QString host()
 {
     const QString id = Config::modelSource();
+    if (id == QLatin1String("custom")) {
+        QString u = Config::customSourceUrl();
+        while (u.endsWith(QLatin1Char('/')))
+            u.chop(1);
+        return customUrlValid(u) ? u : QString();
+    }
     for (const auto &s : sources())
         if (s.id == id)
             return s.host;
     return sources().constFirst().host;
+}
+
+QString sourceTitle()
+{
+    for (const auto &s : sources())
+        if (s.id == Config::modelSource())
+            return s.title;
+    return sources().constFirst().title;
+}
+
+QString logFile()
+{
+    return QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation) + QStringLiteral("/sotto/download.log");
 }
 
 ModelInfo find(const QString &id)
@@ -79,15 +116,23 @@ QString path(const QString &id)
     return dir() + QStringLiteral("/ggml-") + id + QStringLiteral(".bin");
 }
 
-QString url(const QString &id)
+QString baseUrl() { return host(); }
+
+QString url(const QString &id, const QString &base)
 {
+    if (base.isEmpty())
+        return {};
     if (id == VadId)
-        return host() + QStringLiteral("/ggml-org/whisper-vad/resolve/main/ggml-") + id + QStringLiteral(".bin");
-    return host() + QStringLiteral("/ggerganov/whisper.cpp/resolve/main/ggml-") + id + QStringLiteral(".bin");
+        return base + QStringLiteral("/ggml-org/whisper-vad/resolve/main/ggml-") + id + QStringLiteral(".bin");
+    return base + QStringLiteral("/ggerganov/whisper.cpp/resolve/main/ggml-") + id + QStringLiteral(".bin");
 }
+
+QString url(const QString &id) { return url(id, host()); }
 
 QString pageUrl()
 {
+    if (host().isEmpty())
+        return {};
     return host() + QStringLiteral("/ggerganov/whisper.cpp");
 }
 
@@ -110,11 +155,24 @@ ModelDownloader::ModelDownloader(QObject *parent)
 {
 }
 
+void ModelDownloader::note(const QString &line)
+{
+    qCInfo(lcSotto).noquote() << line;
+    Q_EMIT log(line);
+    QDir().mkpath(QFileInfo(Models::logFile()).absolutePath());
+    QFile f(Models::logFile());
+    if (f.open(QIODevice::Append | QIODevice::Text))
+        f.write((QDateTime::currentDateTime().toString(Qt::ISODate) + QLatin1Char(' ') + line + QLatin1Char('\n')).toUtf8());
+}
+
 void ModelDownloader::start(const QString &id)
 {
     if (isRunning())
         return;
     m_main = id;
+    m_host = Models::baseUrl();
+    m_sourceTitle = Models::sourceTitle();
+    m_verify = Models::verifyChecksums();
     m_queue = {id};
     if (id != Models::VadId && !Models::isInstalled(Models::VadId))
         m_queue.append(Models::VadId);
@@ -132,13 +190,23 @@ void ModelDownloader::next()
         return;
     }
 
-    const QUrl url(Models::url(id));
-    qCInfo(lcSotto) << "downloading" << url.toString();
+    const QUrl url(Models::url(id, m_host));
+    if (!url.isValid() || url.isEmpty()) {
+        m_file.close();
+        m_file.remove();
+        done(false, tr("The custom server address is missing or not valid (use https://…)."));
+        return;
+    }
+    note(tr("Source: %1").arg(m_sourceTitle));
+    note(tr("Downloading %1").arg(url.toString()));
     QNetworkRequest req(url);
     req.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
     req.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("Sotto/" SOTTO_VERSION));
     m_reply = m_nam->get(req);
 
+    connect(m_reply, &QNetworkReply::redirected, this, [this](const QUrl &to) {
+        note(tr("Redirected to %1").arg(to.host() + to.path()));
+    });
     connect(m_reply, &QNetworkReply::readyRead, this, [this] {
         const QByteArray chunk = m_reply->readAll();
         m_hash.addData(chunk);
@@ -171,12 +239,18 @@ void ModelDownloader::next()
             return;
         }
         const ModelInfo info = Models::find(id);
-        if (!info.sha256.isEmpty() && (m_file.size() != info.bytes || m_hash.result().toHex() != info.sha256)) {
-            qCWarning(lcSotto) << "checksum mismatch for" << id << m_hash.result().toHex();
-            m_file.remove();
-            done(false, tr("The downloaded file does not match the published checksum, so it was deleted. "
-                           "Try again or switch the source."));
-            return;
+        const QString sum = QString::fromLatin1(m_hash.result().toHex());
+        if (!info.sha256.isEmpty() && m_verify) {
+            if (m_file.size() != info.bytes || sum != QString::fromLatin1(info.sha256)) {
+                note(tr("Checksum does not match: got %1, expected %2").arg(sum, QString::fromLatin1(info.sha256)));
+                m_file.remove();
+                done(false, tr("The downloaded file does not match the published checksum, so it was deleted. "
+                               "Try again or switch the source."));
+                return;
+            }
+            note(tr("SHA-256 matches the published value (%1)").arg(sum.left(16) + QStringLiteral("…")));
+        } else {
+            note(tr("Checksum not verified (SHA-256 %1)").arg(sum));
         }
         QFile::remove(Models::path(id));
         if (!m_file.rename(Models::path(id))) {
@@ -184,7 +258,7 @@ void ModelDownloader::next()
             done(false, tr("Could not save the model file"));
             return;
         }
-        qCInfo(lcSotto) << "downloaded" << Models::path(id);
+        note(tr("Saved %1").arg(Models::path(id)));
         m_queue.removeFirst();
         if (m_queue.isEmpty())
             done(true, {});
@@ -196,7 +270,7 @@ void ModelDownloader::next()
 void ModelDownloader::done(bool ok, const QString &error)
 {
     if (!ok && !error.isEmpty())
-        qCWarning(lcSotto) << "download failed:" << error;
+        note(tr("Failed: %1").arg(error));
     m_queue.clear();
     Q_EMIT finished(m_main, ok, error);
 }

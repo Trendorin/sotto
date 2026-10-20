@@ -30,7 +30,7 @@ public:
 
     void preload(const QString &modelPath, bool gpu);
     void transcribe(std::vector<float> pcm, const Job &job);
-    void cancel() { m_abort = true; }
+    void cancel() { ++m_generation; } // abandons the running and any queued job
     void unload();
 
 Q_SIGNALS:
@@ -40,12 +40,14 @@ Q_SIGNALS:
 
 private:
     bool ensureLoaded(const QString &modelPath, bool gpu, QString *error);
-    void run(std::vector<float> pcm, const Job &job);
+    void run(std::vector<float> pcm, const Job &job, quint64 generation);
 
     QThread m_thread;
     QObject *m_worker = nullptr;
     whisper_context *m_ctx = nullptr; // touched only on m_thread
     QString m_loadedPath;
     bool m_loadedGpu = false;
-    std::atomic_bool m_abort{false};
+    // Every job gets a number; cancelling or starting another job changes the current one, so a
+    // cancelled job can never be revived by the next recording and never reports its result.
+    std::atomic<quint64> m_generation{0};
 };

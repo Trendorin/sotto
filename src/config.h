@@ -38,8 +38,12 @@ void resetOverlayPosition();
 bool useVad();                 // cut silence with Silero VAD before decoding
 void setUseVad(bool on);
 
-QString modelSource();         // "huggingface" | "hf-mirror"
+QString modelSource();         // "huggingface" | "hf-mirror" | "custom"
 void setModelSource(const QString &source);
+QString customSourceUrl();     // base URL of a server with the Hugging Face layout, used when the source is "custom"
+void setCustomSourceUrl(const QString &url);
+bool allowUnverified();        // accept models from the custom source without the published checksum
+void setAllowUnverified(bool on);
 
 int unloadMinutes();           // 0 = keep model loaded
 void setUnloadMinutes(int minutes);

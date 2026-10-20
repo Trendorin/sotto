@@ -106,7 +106,10 @@ void Overlay::dismiss()
 void Overlay::appear()
 {
     if (!isVisible()) {
-        windowHandle()->setScreen(targetScreen());
+        if (!windowHandle())
+            winId(); // creates the native window; only some platforms do it in the constructor
+        if (windowHandle())
+            windowHandle()->setScreen(targetScreen());
         place(topLeftFor(Config::overlayPosition()));
         m_opacity = 0.0;
         show();

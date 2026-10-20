@@ -34,12 +34,25 @@ static void forgetKdeShortcut()
     QDBusConnection::sessionBus().call(msg, QDBus::Block, 2000);
 }
 
+// System tools only from the system's own directories, never from PATH: a copy of `pacman` in
+// ~/.local/bin must not be the one that pkexec later runs as root.
+static QString systemTool(const QString &name)
+{
+    for (const char *dir : {"/usr/bin", "/bin", "/usr/sbin", "/sbin"}) {
+        const QString path = QLatin1String(dir) + QLatin1Char('/') + name;
+        if (QFileInfo(path).isExecutable())
+            return path;
+    }
+    return {};
+}
+
 static bool succeeds(const QString &program, const QStringList &args)
 {
-    if (QStandardPaths::findExecutable(program).isEmpty())
+    const QString tool = systemTool(program);
+    if (tool.isEmpty())
         return false;
     QProcess p;
-    p.start(program, args);
+    p.start(tool, args);
     return p.waitForFinished(5000) && p.exitStatus() == QProcess::NormalExit && p.exitCode() == 0;
 }
 
@@ -47,11 +60,11 @@ static bool succeeds(const QString &program, const QStringList &args)
 static QStringList packageRemoval(const QString &file)
 {
     if (succeeds(QStringLiteral("pacman"), {QStringLiteral("-Qqo"), file}))
-        return {QStringLiteral("pacman"), QStringLiteral("-R"), QStringLiteral("--noconfirm"), QStringLiteral("sotto")};
+        return {systemTool(QStringLiteral("pacman")), QStringLiteral("-R"), QStringLiteral("--noconfirm"), QStringLiteral("sotto")};
     if (succeeds(QStringLiteral("dpkg-query"), {QStringLiteral("-S"), file}))
-        return {QStringLiteral("apt-get"), QStringLiteral("remove"), QStringLiteral("-y"), QStringLiteral("sotto")};
+        return {systemTool(QStringLiteral("apt-get")), QStringLiteral("remove"), QStringLiteral("-y"), QStringLiteral("sotto")};
     if (succeeds(QStringLiteral("rpm"), {QStringLiteral("-qf"), file}))
-        return {QStringLiteral("rpm"), QStringLiteral("-e"), QStringLiteral("sotto")};
+        return {systemTool(QStringLiteral("rpm")), QStringLiteral("-e"), QStringLiteral("sotto")};
     return {};
 }
 
@@ -91,7 +104,8 @@ bool run(QWidget *parent)
             error = QObject::tr("Could not delete %1").arg(appImage);
     } else if (!removal.isEmpty()) {
         // pkexec shows the system password dialog.
-        const int rc = QProcess::execute(QStringLiteral("pkexec"), removal);
+        const QString pkexec = systemTool(QStringLiteral("pkexec"));
+        const int rc = (pkexec.isEmpty() || removal.constFirst().isEmpty()) ? -1 : QProcess::execute(pkexec, removal);
         if (rc != 0)
             error = QObject::tr("The package was not removed. Run it yourself:\n%1").arg(QStringLiteral("sudo ") + removal.join(QLatin1Char(' ')));
     } else if (binary.startsWith(home)) {
@@ -99,10 +113,16 @@ bool run(QWidget *parent)
         const QString prefix = QDir::cleanPath(QFileInfo(binary).absolutePath() + QStringLiteral("/.."));
         QFile manifest(prefix + QStringLiteral("/share/sotto/installed-files"));
         if (manifest.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            const QString root = QFileInfo(prefix).canonicalFilePath();
             while (!manifest.atEnd()) {
                 const QString path = QString::fromLocal8Bit(manifest.readLine()).trimmed();
-                if (path.startsWith(prefix + QLatin1Char('/')))
-                    QFile::remove(path);
+                if (path.isEmpty() || !QDir::isAbsolutePath(path))
+                    continue;
+                // Resolve the directory first: ".." and symlinked parents must not lead out of the prefix.
+                const QFileInfo info(path);
+                const QString dir = QFileInfo(info.absolutePath()).canonicalFilePath();
+                if (!root.isEmpty() && dir.startsWith(root + QLatin1Char('/')))
+                    QFile::remove(dir + QLatin1Char('/') + info.fileName());
             }
             manifest.close();
             manifest.remove();

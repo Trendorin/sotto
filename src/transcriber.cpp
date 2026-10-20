@@ -74,7 +74,7 @@ Transcriber::Transcriber(QObject *parent)
 
 Transcriber::~Transcriber()
 {
-    m_abort = true;
+    ++m_generation;
     m_thread.quit();
     m_thread.wait();
     if (m_ctx)
@@ -100,8 +100,8 @@ void Transcriber::preload(const QString &modelPath, bool gpu)
 
 void Transcriber::transcribe(std::vector<float> pcm, const Job &job)
 {
-    m_abort = false;
-    QMetaObject::invokeMethod(m_worker, [this, pcm = std::move(pcm), job]() mutable { run(std::move(pcm), job); });
+    const quint64 generation = ++m_generation;
+    QMetaObject::invokeMethod(m_worker, [this, pcm = std::move(pcm), job, generation]() mutable { run(std::move(pcm), job, generation); });
 }
 
 void Transcriber::unload()
@@ -141,14 +141,15 @@ bool Transcriber::ensureLoaded(const QString &modelPath, bool gpu, QString *erro
     return true;
 }
 
-void Transcriber::run(std::vector<float> pcm, const Job &job)
+void Transcriber::run(std::vector<float> pcm, const Job &job, quint64 generation)
 {
+    const auto cancelled = [&] { return m_generation.load() != generation; };
     QString error;
     if (!ensureLoaded(job.modelPath, job.gpu, &error)) {
         Q_EMIT failed(error);
         return;
     }
-    if (m_abort)
+    if (cancelled())
         return;
 
     // whisper rejects clips shorter than one second.
@@ -194,13 +195,20 @@ void Transcriber::run(std::vector<float> pcm, const Job &job)
         Q_EMIT static_cast<Transcriber *>(self)->progress(percent);
     };
     p.progress_callback_user_data = this;
-    p.abort_callback = [](void *flag) { return static_cast<std::atomic_bool *>(flag)->load(); };
-    p.abort_callback_user_data = &m_abort;
+    struct Abort {
+        const std::atomic<quint64> *current;
+        quint64 generation;
+    } abort{&m_generation, generation};
+    p.abort_callback = [](void *data) {
+        const auto *a = static_cast<const Abort *>(data);
+        return a->current->load() != a->generation;
+    };
+    p.abort_callback_user_data = &abort;
 
     QElapsedTimer timer;
     timer.start();
     const int rc = whisper_full(m_ctx, p, pcm.data(), int(pcm.size()));
-    if (m_abort) {
+    if (cancelled()) {
         qCInfo(lcSotto) << "transcription cancelled";
         return;
     }

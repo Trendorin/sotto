@@ -8,6 +8,7 @@
 #include <QAudioDevice>
 #include <QCheckBox>
 #include <QComboBox>
+#include <QDateTime>
 #include <QDesktopServices>
 #include <QDialogButtonBox>
 #include <QDir>
@@ -18,6 +19,7 @@
 #include <QLineEdit>
 #include <QMediaDevices>
 #include <QMessageBox>
+#include <QPlainTextEdit>
 #include <QProgressBar>
 #include <QPushButton>
 #include <QRadioButton>
@@ -76,6 +78,24 @@ SettingsDialog::SettingsDialog(ModelDownloader *downloader, GlobalShortcut *shor
     sourceRow->addWidget(m_source);
     sourceRow->addWidget(m_sourceLink, 1);
     recForm->addRow(tr("Source:"), sourceRow);
+
+    m_customUrl = new QLineEdit;
+    m_customUrl->setPlaceholderText(tr("https://your-server.example/ (same layout as huggingface.co)"));
+    m_customUrl->setClearButtonEnabled(true);
+    m_customUrl->setToolTip(tr("Models are fetched from ADDRESS/ggerganov/whisper.cpp/resolve/main/ggml-NAME.bin"));
+    recForm->addRow(tr("Server:"), m_customUrl);
+    m_unverified = new QCheckBox(tr("Do not check the published SHA-256 (my own models)"));
+    m_unverified->setToolTip(tr("Only for a custom server that hosts files other than the official ones. "
+                                "Official models are always verified."));
+    recForm->addRow(QString(), m_unverified);
+
+    m_downloadLog = new QPlainTextEdit;
+    m_downloadLog->setReadOnly(true);
+    m_downloadLog->setMaximumHeight(96);
+    m_downloadLog->setLineWrapMode(QPlainTextEdit::NoWrap);
+    m_downloadLog->setPlaceholderText(tr("The download log appears here: server, redirects, checksum."));
+    m_downloadLog->setToolTip(tr("Also saved to %1").arg(Models::logFile()));
+    recForm->addRow(tr("Download log:"), m_downloadLog);
 
     m_language = new QComboBox;
     m_language->addItem(tr("Detect automatically"), QStringLiteral("auto"));
@@ -212,6 +232,14 @@ SettingsDialog::SettingsDialog(ModelDownloader *downloader, GlobalShortcut *shor
         Config::setModelSource(m_source->currentData().toString()); // used by the downloader right away
         updateSourceLink();
     });
+    connect(m_customUrl, &QLineEdit::textChanged, this, [this] {
+        Config::setCustomSourceUrl(m_customUrl->text());
+        updateSourceLink();
+    });
+    connect(m_unverified, &QCheckBox::toggled, this, [](bool on) { Config::setAllowUnverified(on); });
+    connect(m_downloader, &ModelDownloader::log, this, [this](const QString &line) {
+        m_downloadLog->appendPlainText(QDateTime::currentDateTime().toString(QStringLiteral("HH:mm:ss")) + QLatin1Char(' ') + line);
+    });
     connect(m_modelAction, &QPushButton::clicked, this, [this] {
         const QString id = selectedModel();
         if (m_downloader->isRunning()) {
@@ -246,6 +274,8 @@ SettingsDialog::SettingsDialog(ModelDownloader *downloader, GlobalShortcut *shor
 void SettingsDialog::load()
 {
     m_source->setCurrentIndex(std::max(0, m_source->findData(Config::modelSource())));
+    m_customUrl->setText(Config::customSourceUrl());
+    m_unverified->setChecked(Config::allowUnverified());
     updateSourceLink();
     m_vad->setChecked(Config::useVad());
     updatePasteAccess();
@@ -290,6 +320,10 @@ void SettingsDialog::fillModels()
 
 void SettingsDialog::updateModelRow()
 {
+    const bool busy = m_downloader->isRunning();
+    m_source->setEnabled(!busy);
+    m_customUrl->setEnabled(!busy);
+    m_unverified->setEnabled(!busy);
     const QString id = selectedModel();
     const bool downloading = m_downloader->isRunning();
     const bool installed = Models::isInstalled(id);
@@ -320,8 +354,20 @@ void SettingsDialog::updateShortcutLabel()
 
 void SettingsDialog::updateSourceLink()
 {
+    const bool custom = Models::customSource();
+    m_customUrl->setVisible(custom);
+    m_unverified->setVisible(custom);
+    if (auto *form = qobject_cast<QFormLayout *>(m_customUrl->parentWidget()->layout())) {
+        form->labelForField(m_customUrl)->setVisible(custom);
+    }
     const QString url = Models::pageUrl();
-    m_sourceLink->setText(QStringLiteral("<a href=\"%1\">%2</a>").arg(url, QUrl(url).host() + QUrl(url).path()));
+    if (url.isEmpty()) {
+        m_sourceLink->setText(custom && !m_customUrl->text().trimmed().isEmpty() ? tr("not a valid address (https://…)")
+                                                                                 : tr("enter the server address below"));
+        m_sourceLink->setToolTip({});
+        return;
+    }
+    m_sourceLink->setText(QStringLiteral("<a href=\"%1\">%2</a>").arg(url.toHtmlEscaped(), (QUrl(url).host() + QUrl(url).path()).toHtmlEscaped()));
     m_sourceLink->setToolTip(tr("whisper.cpp models: %1\nVAD: %2").arg(url, Models::url(Models::VadId)));
 }
 

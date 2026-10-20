@@ -9,6 +9,7 @@ class QCheckBox;
 class QComboBox;
 class QLabel;
 class QLineEdit;
+class QPlainTextEdit;
 class QProgressBar;
 class QPushButton;
 class QRadioButton;
@@ -46,6 +47,9 @@ private:
     QLabel *m_modelNote;
     QComboBox *m_source;
     QLabel *m_sourceLink;
+    QLineEdit *m_customUrl;
+    QCheckBox *m_unverified;
+    QPlainTextEdit *m_downloadLog;
     QCheckBox *m_vad;
     QComboBox *m_language;
     QCheckBox *m_gpu;

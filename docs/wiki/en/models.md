@@ -22,6 +22,22 @@ both under the MIT license. If Hugging Face is unreachable, switch **Source** to
 Either way, a download is kept only if its size and SHA-256 match the published ones; a file
 that does not match is deleted.
 
+## Your own server
+
+Pick **Custom server…** as the source and enter the address of a server that lays files out like
+huggingface.co (`<address>/ggerganov/whisper.cpp/resolve/main/ggml-<name>.bin`, and
+`<address>/ggml-org/whisper-vad/resolve/main/ggml-silero-v5.1.2.bin` for the VAD model). The
+address must start with `https://` (`http://` only for localhost). Official models are still
+checked against their published SHA-256; tick **Do not check the published SHA-256** only if your
+server hosts files that differ from the official ones.
+
+## Download log
+
+While a model downloads, the settings show a log: the source, the exact URL, where the server
+redirected to (Hugging Face serves files from its CDN), the checksum result and where the file was
+saved. The same lines are appended to `~/.local/share/sotto/download.log` and the journal
+(`journalctl --user -t sotto`). The source and checksum options are locked while a download runs.
+
 ## Your own files
 
 Put any `ggml-*.bin` into `~/.local/share/sotto/models/` and pick it in the settings.

@@ -55,6 +55,10 @@ void setUseVad(bool on) { set("vad", on); }
 
 QString modelSource() { return get("modelSource", QStringLiteral("huggingface")).toString(); }
 void setModelSource(const QString &source) { set("modelSource", source); }
+QString customSourceUrl() { return get("customSourceUrl").toString().trimmed(); }
+void setCustomSourceUrl(const QString &url) { set("customSourceUrl", url.trimmed()); }
+bool allowUnverified() { return get("allowUnverified", false).toBool(); }
+void setAllowUnverified(bool on) { set("allowUnverified", on); }
 
 int unloadMinutes() { return get("unloadMinutes", 10).toInt(); }
 void setUnloadMinutes(int minutes) { set("unloadMinutes", minutes); }
@@ -104,13 +108,23 @@ QString appImage()
     return !root.isEmpty() && self.startsWith(root + QLatin1Char('/')) ? image : QString();
 }
 
+// A path as one argument of a Desktop Entry Exec line: in double quotes, with the characters
+// the specification names escaped (a path with spaces or a % must not be split or expanded).
+static QString execQuoted(QString path)
+{
+    for (const QChar c : {QLatin1Char('\\'), QLatin1Char('"'), QLatin1Char('$'), QLatin1Char('`')})
+        path.replace(c, QString(QLatin1Char('\\')) + c);
+    path.replace(QLatin1Char('%'), QStringLiteral("%%"));
+    return QLatin1Char('"') + path + QLatin1Char('"');
+}
+
 QString launchCommand()
 {
     if (const QString image = appImage(); !image.isEmpty())
-        return QLatin1Char('"') + image + QLatin1Char('"');
+        return execQuoted(image);
     if (QStandardPaths::findExecutable(QStringLiteral("sotto")) == QCoreApplication::applicationFilePath())
         return QStringLiteral("sotto");
-    return QCoreApplication::applicationFilePath();
+    return execQuoted(QCoreApplication::applicationFilePath());
 }
 
 static bool writeIfChanged(const QString &path, const QByteArray &content)

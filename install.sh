@@ -65,6 +65,31 @@ info() { printf '    %s%s%s\n' "$D" "$*" "$R"; }
 die() { printf '\n  %s✗ %s%s\n\n' "$RED" "$*" "$R" >&2; exit 1; }
 tilde() { case "$1" in "$HOME"/*) printf '~/%s' "${1#"$HOME"/}" ;; "$HOME") printf '~' ;; *) printf '%s' "$1" ;; esac; }
 
+# desktop_entry SRC DEST BINARY — copies a .desktop file and points Exec and TryExec at BINARY,
+# quoted the way the Desktop Entry spec wants, so paths with spaces or odd characters work and
+# nothing in the path is ever interpreted as a program.
+desktop_entry() {
+    local src="$1" dst="$2" bin="$3" q line name="${3##*/}"
+    q="${bin//\\/\\\\}"; q="${q//\"/\\\"}"; q="${q//\$/\\\$}"; q="${q//\`/\\\`}"; q="${q//%/%%}"
+    while IFS= read -r line || [ -n "$line" ]; do
+        case "$line" in
+            "Exec=$name" | "Exec=$name "*) printf 'Exec="%s"%s\n' "$q" "${line#"Exec=$name"}" ;;
+            "TryExec=$name") printf 'TryExec=%s\n' "$bin" ;;
+            *) printf '%s\n' "$line" ;;
+        esac
+    done <"$src" >"$dst"
+}
+
+# inside_prefix PATH — true if PATH (a line of the uninstall manifest) really is below $PREFIX:
+# no "..", and its directory resolves, symlinks included, to somewhere inside the prefix.
+inside_prefix() {
+    local f="$1" d root
+    case "$f" in */../* | */..) return 1 ;; esac
+    d="$(cd "$(dirname "$f")" 2>/dev/null && pwd -P)" || return 1
+    root="$(cd "$PREFIX" 2>/dev/null && pwd -P)" || return 1
+    case "$d/" in "$root"/*) return 0 ;; *) return 1 ;; esac
+}
+
 # Closed input is never taken as an answer: stop before doing anything else.
 read_answer() {
     if ! read -r REPLY; then
@@ -245,7 +270,7 @@ uninstall() {
     if [ -f "$MANIFEST" ]; then
         while IFS= read -r f; do
             [ -n "$f" ] || continue
-            case "$f" in "$PREFIX"/*) ;; *) continue ;; esac
+            inside_prefix "$f" || continue
             if [ -e "$f" ] || [ -L "$f" ]; then rm -f "$f"; ok "removed $(tilde "$f")"; fi
         done <"$MANIFEST"
         rm -f "$MANIFEST"
@@ -362,7 +387,7 @@ install_files() {
         ok "whisper.cpp → $(tilde "$PRIV")"
     fi
     local desktop="$PREFIX/share/applications/$APP_ID.desktop"
-    [ -f "$desktop" ] && sed -i "s|^Exec=sotto|Exec=$BIN_DIR/sotto|" "$desktop"
+    [ -f "$desktop" ] && { desktop_entry "$desktop" "$desktop.new" "$BIN_DIR/sotto" && mv -f "$desktop.new" "$desktop"; }
     files+=("$MANIFEST")
     printf '%s\n' "${files[@]}" >"$MANIFEST"
     refresh_menus
