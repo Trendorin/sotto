@@ -5,6 +5,14 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.2.1] — 2026-10-20
+
+### Fixed
+- The AppImage did not start on Wayland: it lacked Qt's Wayland shell plugins (the build tool that packs it
+  was pinned to a release that does not deploy them). The release workflow now checks that they are inside.
+  The distribution packages were not affected.
+
+
 ## [1.2.0] — 2026-10-20
 
 ### Added
@@ -71,7 +79,8 @@ First public release. Compared with the private 0.x builds:
   any other AppImage inherit it, so a packaged Sotto could point its menu entry at, or remove,
   someone else's AppImage. Sotto now checks that it really runs from inside that AppImage.
 
-[Unreleased]: https://github.com/Trendorin/sotto/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/Trendorin/sotto/compare/v1.2.1...HEAD
+[1.2.1]: https://github.com/Trendorin/sotto/releases/tag/v1.2.1
 [1.2.0]: https://github.com/Trendorin/sotto/releases/tag/v1.2.0
 [1.1.0]: https://github.com/Trendorin/sotto/releases/tag/v1.1.0
 [1.0.0]: https://github.com/Trendorin/sotto/releases/tag/v1.0.0

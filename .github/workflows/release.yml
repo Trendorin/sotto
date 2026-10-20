@@ -169,6 +169,9 @@ jobs:
           sudo apt-get install -yq xvfb
           img=$(ls dist/*.AppImage)
           xvfb-run -a "$img" --appimage-extract-and-run --version
+          "$img" --appimage-extract >/dev/null
+          test -f squashfs-root/usr/plugins/wayland-shell-integration/libxdg-shell.so
+          test -f squashfs-root/usr/plugins/platforms/libqwayland-generic.so
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:

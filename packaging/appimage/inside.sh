@@ -101,7 +101,9 @@ whisper() {
 
 tools() {
     mkdir -p $W/tools
-    # Build tools are pinned to a release and checked against its SHA-256 before they run.
+    # Build tools are checked against a pinned SHA-256 before they run. The plugin-qt release 1-alpha-20250213-1
+# does not deploy Qt's Wayland shell plugins (the AppImage would not start on Wayland), the "continuous"
+# build does; if upstream replaces a file the check fails, so re-pin it after testing the AppImage.
     fetch_tool() { # URL SHA256 DIR
         local url=$1 sha=$2 file=$3/${1##*/}
         if [[ -x $file ]] && echo "$sha  $file" | sha256sum -c --status; then return; fi
@@ -109,10 +111,10 @@ tools() {
         echo "$sha  $file" | sha256sum -c --status || { echo "checksum mismatch for $url" >&2; rm -f "$file"; exit 1; }
         chmod +x "$file"
     }
-    fetch_tool https://github.com/linuxdeploy/linuxdeploy/releases/download/1-alpha-20251107-1/linuxdeploy-x86_64.AppImage \
-        c20cd71e3a4e3b80c3483cef793cda3f4e990aca14014d23c544ca3ce1270b4d $W/tools
-    fetch_tool https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/1-alpha-20250213-1/linuxdeploy-plugin-qt-x86_64.AppImage \
-        15106be885c1c48a021198e7e1e9a48ce9d02a86dd0a1848f00bdbf3c1c92724 $W/tools
+    fetch_tool https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage \
+        8aea8da0f7f7039d2a2cecb14657d752a222a5e1d3825caeef186c82f751cdd1 $W/tools
+    fetch_tool https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage \
+        cfc1055b2b9dbc08412b579f20990b7b41a17b61beaa5847dc9477c96c9e9617 $W/tools
 }
 
 step deps deps
