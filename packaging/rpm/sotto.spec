@@ -9,7 +9,7 @@
 %global _lto_cflags %{nil}
 
 Name:           sotto
-Version:        1.1.1
+Version:        1.1.0
 Release:        1%{?dist}
 Summary:        Voice typing for Linux with whisper.cpp
 License:        MIT
@@ -69,7 +69,7 @@ rm -rf %{buildroot}%{_datadir}/licenses
 %{_datadir}/icons/hicolor/scalable/apps/io.github.trendorin.Sotto.svg
 
 %changelog
-* Tue Oct 20 2026 Trendorin <193045225+Trendorin@users.noreply.github.com> - 1.1.1-1
+* Tue Oct 20 2026 Trendorin <193045225+Trendorin@users.noreply.github.com> - 1.1.0-1
 - Download log and custom model server, security fixes, smooth dragging of the indicator
 
 * Tue Oct 20 2026 Trendorin <193045225+Trendorin@users.noreply.github.com> - 1.0.0-1

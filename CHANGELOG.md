@@ -5,7 +5,7 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-## [1.1.1] — 2026-10-20
+## [1.1.0] — 2026-10-20
 
 New: a visible, replaceable model source and a download log. Security fixes after an independent review.
 
@@ -64,6 +64,6 @@ First public release. Compared with the private 0.x builds:
   any other AppImage inherit it, so a packaged Sotto could point its menu entry at, or remove,
   someone else's AppImage. Sotto now checks that it really runs from inside that AppImage.
 
-[Unreleased]: https://github.com/Trendorin/sotto/compare/v1.1.1...HEAD
-[1.1.1]: https://github.com/Trendorin/sotto/releases/tag/v1.1.1
+[Unreleased]: https://github.com/Trendorin/sotto/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/Trendorin/sotto/releases/tag/v1.1.0
 [1.0.0]: https://github.com/Trendorin/sotto/releases/tag/v1.0.0
