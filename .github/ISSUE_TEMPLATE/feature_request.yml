@@ -1,0 +1,20 @@
+name: Feature request
+description: Suggest an improvement
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What do you want to do?
+      description: The task or problem, not only the solution.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: How could Sotto help?
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options: [Recognition, Shortcut, Pasting, Models, Settings, Installation, Other]

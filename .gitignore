@@ -1,0 +1,7 @@
+/build*/
+/dist/
+/AppDir/
+/packaging/arch/src/
+/packaging/arch/pkg/
+*.pkg.tar.*
+__pycache__/
