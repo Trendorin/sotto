@@ -145,13 +145,80 @@ static bool writeIfChanged(const QString &path, const QByteArray &content)
     return true;
 }
 
+static QByteArray readAll(const QString &path)
+{
+    QFile file(path);
+    return file.open(QIODevice::ReadOnly) ? file.readAll() : QByteArray();
+}
+
+// The value of "Key=" in a desktop entry, empty if absent.
+static QString entryValue(const QByteArray &entry, const char *key)
+{
+    const QByteArray prefix = QByteArray(key) + '=';
+    for (const QByteArray &line : entry.split('\n'))
+        if (line.startsWith(prefix))
+            return QString::fromUtf8(line.mid(prefix.size()));
+    return {};
+}
+
+// The program a desktop entry's Exec line starts, when it is a quoted absolute path.
+static QString execPath(const QByteArray &entry)
+{
+    const QString exec = entryValue(entry, "Exec");
+    if (!exec.startsWith(QLatin1String("\"/")))
+        return {};
+    QString path;
+    for (qsizetype i = 1; i < exec.size() && exec[i] != QLatin1Char('"'); ++i) {
+        if (exec[i] == QLatin1Char('\\') && i + 1 < exec.size())
+            ++i;
+        path += exec[i];
+    }
+    return path.replace(QStringLiteral("%%"), QStringLiteral("%"));
+}
+
+// A Sotto installed by install.sh lists its desktop entry in <prefix>/share/sotto/installed-files.
+static bool installedHere(const QString &entryPath)
+{
+    const QString prefix = QFileInfo(QCoreApplication::applicationDirPath() + QStringLiteral("/..")).canonicalFilePath();
+    const QByteArray manifest = readAll(prefix + QStringLiteral("/share/sotto/installed-files"));
+    return manifest.split('\n').contains(entryPath.toUtf8());
+}
+
+// An AppImage that was run once and then deleted leaves its menu entry and autostart behind. If its
+// entry took the place of this installation's one, the portals no longer know our app id and the
+// shortcut stops working; an autostart entry would start a file that is gone.
+static void repairIntegration(const QString &entryPath)
+{
+    const QByteArray entry = readAll(entryPath);
+    if (entry.contains("X-AppImage-Integrated=true") && !QFileInfo::exists(entryValue(entry, "TryExec"))) {
+        QFile::remove(entryPath);
+        if (installedHere(entryPath)) {
+            QByteArray own = readAll(QStringLiteral(":/sotto.desktop"));
+            own.replace("\nExec=sotto", "\nExec=" + execQuoted(QCoreApplication::applicationFilePath()).toUtf8());
+            writeIfChanged(entryPath, own);
+        }
+    }
+    if (autostart()) {
+        const QString target = execPath(readAll(autostartFile()));
+        if (!target.isEmpty() && !QFileInfo::exists(target))
+            setAutostart(true);
+    }
+}
+
 void integrateAppImage()
 {
-    if (appImage().isEmpty())
-        return;
     const QString data = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation);
-    const QString appDir = qEnvironmentVariable("APPDIR");
     const QString id = QLatin1String(AppId);
+    const QString entryPath = data + QStringLiteral("/applications/") + id + QStringLiteral(".desktop");
+    if (appImage().isEmpty()) {
+        repairIntegration(entryPath);
+        return;
+    }
+    const QString appDir = qEnvironmentVariable("APPDIR");
+
+    // Don't replace the entry of a source installation in ~/.local: it names the app id already.
+    if (const QByteArray existing = readAll(entryPath); !existing.isEmpty() && !existing.contains("X-AppImage-Integrated=true"))
+        return;
 
     // Don't shadow a system-wide installation.
     for (const QString &dir : QStandardPaths::standardLocations(QStandardPaths::GenericDataLocation)) {
@@ -170,7 +237,7 @@ void integrateAppImage()
     entry.replace("\nExec=sotto", "\nExec=" + launchCommand().toUtf8());
     entry.append("TryExec=" + appImage().toUtf8() + "\n");
     entry.append("X-AppImage-Integrated=true\n");
-    writeIfChanged(data + QStringLiteral("/applications/") + id + QStringLiteral(".desktop"), entry);
+    writeIfChanged(entryPath, entry);
 
     // Keep an existing autostart entry pointing at the current file location.
     if (autostart())

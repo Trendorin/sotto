@@ -5,6 +5,15 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.2.4] — 2026-10-21
+
+### Fixed
+- After the AppImage was run once and deleted, the shortcut of an installed Sotto stopped working
+  ("An app id is required"): the AppImage had written its menu entry over the installation's one, and
+  the portals ignore an entry whose program is gone. The AppImage no longer replaces another
+  installation's entry, and Sotto repairs what a deleted AppImage left behind: its menu entry and an
+  autostart entry that pointed at it.
+
 ## [1.2.3] — 2026-10-21
 
 ### Added
@@ -106,7 +115,8 @@ First public release. Compared with the private 0.x builds:
   any other AppImage inherit it, so a packaged Sotto could point its menu entry at, or remove,
   someone else's AppImage. Sotto now checks that it really runs from inside that AppImage.
 
-[Unreleased]: https://github.com/Trendorin/sotto/compare/v1.2.3...HEAD
+[Unreleased]: https://github.com/Trendorin/sotto/compare/v1.2.4...HEAD
+[1.2.4]: https://github.com/Trendorin/sotto/releases/tag/v1.2.4
 [1.2.3]: https://github.com/Trendorin/sotto/releases/tag/v1.2.3
 [1.2.2]: https://github.com/Trendorin/sotto/releases/tag/v1.2.2
 [1.2.1]: https://github.com/Trendorin/sotto/releases/tag/v1.2.1

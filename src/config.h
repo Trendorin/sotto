@@ -67,7 +67,8 @@ QString appImage();
 QString launchCommand();
 
 // When running as an AppImage, install a .desktop entry and icon into ~/.local/share
-// so the desktop portals can identify the app (and it shows up in the menu).
+// so the desktop portals can identify the app (and it shows up in the menu). Otherwise repair
+// what a deleted AppImage left behind: its menu entry and an autostart entry pointing at it.
 void integrateAppImage();
 
 // Sotto up to 0.2 used the app id "io.github.sotto": move its autostart entry over
