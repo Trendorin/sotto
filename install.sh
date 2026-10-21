@@ -5,12 +5,14 @@
 #   ./install.sh --yes           no questions: defaults plus the flags below
 #   ./install.sh --prefix DIR    install into DIR/bin and DIR/share (default ~/.local)
 #   ./install.sh --own-whisper   build the pinned whisper.cpp even if the system has one
+#   ./install.sh --no-packages   never install missing distribution packages, only name them
 #   ./install.sh --uninstall     remove Sotto (add --purge to delete models and settings too)
 #
 # Builds from this source checkout with CMake. Without a system whisper.cpp it builds
 # the pinned version into PREFIX/lib/sotto (Vulkan when the headers and glslc are there).
-# Prebuilt packages (Arch, Debian, Fedora, AppImage) are on the releases page. Never
-# uses sudo for the install.
+# Prebuilt packages (Arch, Debian, Fedora, AppImage) are on the releases page. Sotto
+# itself goes into your home without sudo; sudo is used only, after asking, to install
+# missing distribution packages (pacman, apt, dnf or zypper).
 
 set -euo pipefail
 
@@ -22,13 +24,16 @@ ASSUME_YES=0
 ACTION=install
 PURGE=0
 
-usage() { sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'; }
+PACKAGES=1
+
+usage() { sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'; }
 
 while [ $# -gt 0 ]; do
     case "$1" in
         --prefix) PREFIX="${2:?--prefix needs a directory}"; shift 2 ;;
         --prefix=*) PREFIX="${1#--prefix=}"; shift ;;
         --own-whisper) OWN_WHISPER=1; shift ;;
+        --no-packages) PACKAGES=0; shift ;;
         -y | --yes) ASSUME_YES=1; shift ;;
         --uninstall) ACTION=uninstall; shift ;;
         --purge) PURGE=1; shift ;;
@@ -183,7 +188,7 @@ cmake_progress() {
     grep -oE '^\[ *[0-9]+(/[0-9]+|%)\]' "$1" | tail -1 | tr -d '[] '
 }
 
-# Distribution family for package hints: arch, debian, fedora or other.
+# Distribution family for package hints: arch, debian, fedora, suse or other.
 distro() {
     local id like
     id="$(. /etc/os-release 2>/dev/null && printf '%s' "${ID:-}")"
@@ -192,23 +197,56 @@ distro() {
         *" arch "*) printf arch ;;
         *" debian "* | *" ubuntu "*) printf debian ;;
         *" fedora "* | *" rhel "*) printf fedora ;;
+        *" suse "* | *" opensuse "*) printf suse ;;
         *) printf other ;;
     esac
 }
 
-# need_packages "what" arch-pkgs debian-pkgs fedora-pkgs → stops with the right install command
-need_packages() {
-    local what="$1" cmd
+# as_root command... — runs it directly when we are root (containers), otherwise through sudo
+as_root() { if [ "$(id -u)" = 0 ]; then "$@"; else sudo "$@"; fi; }
+
+# pkg_install arch-pkgs debian-pkgs fedora-pkgs suse-pkgs — the package manager call, as root
+pkg_install() {
     case "$(distro)" in
-        arch) cmd="sudo pacman -S --needed $2" ;;
-        debian) cmd="sudo apt install $3" ;;
-        fedora) cmd="sudo dnf install $4" ;;
-        *) cmd="" ;;
+        arch) as_root pacman -S --needed --noconfirm $1 ;;
+        debian) as_root env DEBIAN_FRONTEND=noninteractive sh -c "apt-get update -q && apt-get install -y --no-install-recommends $2" ;;
+        fedora) as_root dnf install -y $3 ;;
+        suse) as_root zypper --non-interactive install $4 ;;
+        *) return 1 ;;
     esac
-    printf '\n  %s✗ %s%s\n' "$RED" "$what" "$R" >&2
-    [ -n "$cmd" ] && printf '\n    Install them with:\n      %s%s%s\n' "$B" "$cmd" "$R" >&2
-    printf '\n    Then run ./install.sh again.\n\n' >&2
-    exit 1
+}
+
+# pkg_hint arch-pkgs debian-pkgs fedora-pkgs suse-pkgs → the command a person would type
+pkg_hint() {
+    case "$(distro)" in
+        arch) printf 'sudo pacman -S --needed %s' "$1" ;;
+        debian) printf 'sudo apt install %s' "$2" ;;
+        fedora) printf 'sudo dnf install %s' "$3" ;;
+        suse) printf 'sudo zypper install %s' "$4" ;;
+    esac
+}
+
+# get_packages "what is missing" arch-pkgs debian-pkgs fedora-pkgs suse-pkgs
+# Offers to install the packages (default yes) and returns 0 once they are in. Asks for the sudo
+# password in the foreground, before the progress line starts.
+get_packages() {
+    local what="$1" hint
+    shift
+    hint="$(pkg_hint "$@")"
+    warn "$what"
+    if [ -z "$hint" ]; then
+        info "install them with your distribution's package manager"
+        return 1
+    fi
+    if [ "$PACKAGES" = 1 ] && ask_yn "Install them now ($hint)?" y; then
+        if [ "$(id -u)" = 0 ] || { [ "$INTERACTIVE" = 0 ] && ! [ -t 0 ] && sudo -n true 2>/dev/null; } || { [ -t 0 ] && sudo -v; }; then
+            ( spin "Installing packages" pkg_install "$@" ) && return 0
+        else
+            warn "sudo is not available here"
+        fi
+    fi
+    info "install them with:  $hint"
+    return 1
 }
 
 progress() { cmake_progress "$1"; }
@@ -233,7 +271,10 @@ set_paths() {
 set_paths
 
 installed_version() {
-    if [ -x "$BIN_DIR/sotto" ]; then "$BIN_DIR/sotto" --version 2>/dev/null | awk '{print $2}'; fi
+    local name ver
+    if [ -x "$BIN_DIR/sotto" ]; then
+        read -r name ver _ < <("$BIN_DIR/sotto" --version 2>/dev/null) && printf '%s' "$ver"
+    fi
 }
 
 refresh_menus() {
@@ -241,9 +282,30 @@ refresh_menus() {
     command -v gtk-update-icon-cache >/dev/null 2>&1 && gtk-update-icon-cache -qtf "$PREFIX/share/icons/hicolor" 2>/dev/null || true
 }
 
+# running_here → the process ids of Sotto started from this prefix (also when the file was replaced)
+running_here() {
+    local p exe bin
+    bin="$(cd "$BIN_DIR" 2>/dev/null && pwd -P)/sotto" || return 0
+    for p in $(pgrep -x sotto 2>/dev/null || true); do
+        exe="$(readlink "/proc/$p/exe" 2>/dev/null || true)"
+        case "$exe" in "$bin" | "$bin (deleted)") printf '%s\n' "$p" ;; esac
+    done
+}
+
+# stop_running [pid...] — stops those Sotto processes, by default the ones of this prefix
 stop_running() {
-    pkill -x sotto 2>/dev/null || true
-    pkill -f '/[S]otto[^/]*\.AppImage' 2>/dev/null || true
+    local pids
+    if [ $# -gt 0 ]; then pids="$*"; else pids="$(running_here)"; fi
+    [ -n "$pids" ] && kill $pids 2>/dev/null || true
+}
+
+# other_install → the sotto that stays when this prefix is removed (a package or another prefix)
+other_install() {
+    local d IFS=:
+    for d in $PATH; do
+        if [ -x "$d/sotto" ] && ! [ "$d/sotto" -ef "$BIN_DIR/sotto" ]; then printf '%s' "$d/sotto"; return 0; fi
+    done
+    return 1
 }
 
 # ---- uninstall --------------------------------------------------------------------------
@@ -266,6 +328,8 @@ uninstall() {
         exit 0
     fi
     ask_yn "Remove Sotto?" y || { info "Nothing changed."; exit 0; }
+    local other
+    other="$(other_install || true)"
     stop_running
     if [ -f "$MANIFEST" ]; then
         while IFS= read -r f; do
@@ -279,6 +343,13 @@ uninstall() {
         done
         refresh_menus
     fi
+    # Autostart, shortcut, models and settings are shared by every Sotto of this user.
+    if [ -n "$other" ]; then
+        ok "kept autostart, shortcut, models and settings for $(tilde "$other")"
+        ok "Sotto is uninstalled from $(tilde "$PREFIX")."
+        return 0
+    fi
+    pkill -f '/[S]otto[^/]*\.AppImage' 2>/dev/null || true
     # AppImage menu entry (the .AppImage file itself stays wherever you saved it)
     if grep -qs 'X-AppImage-Integrated=true' "$DATA/applications/$APP_ID.desktop"; then
         rm -f "$DATA/applications/$APP_ID.desktop" "$DATA/icons/hicolor/scalable/apps/$APP_ID.svg"
@@ -306,54 +377,91 @@ uninstall() {
 
 # ---- checks --------------------------------------------------------------------------------
 
+# Everything Sotto needs to build, per distribution (arch, debian, fedora, suse). On Arch the
+# system whisper.cpp is used; elsewhere the pinned one is built, which needs git, ninja and,
+# for the GPU, the Vulkan headers and glslc.
+BUILD_PKGS=(
+    "base-devel cmake ninja qt6-base qt6-multimedia whisper-cpp ggml-vulkan"
+    "build-essential pkg-config cmake ninja-build git ca-certificates qt6-base-dev qt6-multimedia-dev"
+    "gcc-c++ pkgconf-pkg-config cmake ninja-build git qt6-qtbase-devel qt6-qtmultimedia-devel"
+    "gcc-c++ pkgconf-pkg-config cmake ninja git ca-certificates-mozilla qt6-base-devel qt6-multimedia-devel"
+)
+# What makes it work well: the Wayland indicator, the GPU, direct pasting, X11 on GNOME.
+EXTRA_PKGS=(
+    "qt6-wayland layer-shell-qt wl-clipboard vulkan-headers shaderc"
+    "qt6-wayland-dev qt6-qpa-plugins liblayershellqtinterface-dev libvulkan-dev glslc spirv-headers wl-clipboard"
+    "qt6-qtwayland-devel layer-shell-qt-devel vulkan-loader-devel glslc spirv-headers-devel wl-clipboard"
+    "qt6-wayland-devel layer-shell-qt6-devel vulkan-devel vulkan-headers shaderc spirv-headers wl-clipboard"
+)
+
+QMAKE=""
 SYSTEM_WHISPER=0
 VULKAN=OFF
+# build_tools_present → 0 when CMake, a C++ compiler, Qt 6 with Multimedia and either a system
+# whisper.cpp or what building the pinned one takes (git, ninja) are there
+build_tools_present() {
+    local cand
+    QMAKE="" SYSTEM_WHISPER=0
+    for cand in qmake6 /usr/lib/qt6/bin/qmake /usr/lib64/qt6/bin/qmake /usr/lib/x86_64-linux-gnu/qt6/bin/qmake qmake-qt6 qmake; do
+        if command -v "$cand" >/dev/null 2>&1 && "$cand" -query QT_VERSION 2>/dev/null | grep -q '^6\.'; then QMAKE="$cand"; break; fi
+    done
+    if [ "$OWN_WHISPER" = 0 ] && pkg-config --exists whisper 2>/dev/null; then SYSTEM_WHISPER=1; fi
+    command -v cmake >/dev/null 2>&1 &&
+        { command -v c++ >/dev/null 2>&1 || command -v g++ >/dev/null 2>&1 || command -v clang++ >/dev/null 2>&1; } &&
+        [ -n "$QMAKE" ] && [ -d "$("$QMAKE" -query QT_INSTALL_LIBS)/cmake/Qt6Multimedia" ] &&
+        { [ "$SYSTEM_WHISPER" = 1 ] || { command -v git >/dev/null 2>&1 && command -v ninja >/dev/null 2>&1; }; }
+}
+
+vulkan_present() { command -v glslc >/dev/null 2>&1 && [ -e /usr/include/vulkan/vulkan.h ]; }
+layer_shell_present() { [ -d "$("$QMAKE" -query QT_INSTALL_LIBS)/cmake/LayerShellQt" ]; }
+# On GNOME Sotto runs through XWayland so that its indicator never takes the focus.
+xcb_needed_missing() {
+    case "${XDG_CURRENT_DESKTOP:-}" in *GNOME*) [ ! -e "$("$QMAKE" -query QT_INSTALL_PLUGINS)/platforms/libqxcb.so" ] ;; *) return 1 ;; esac
+}
+
+missing_extras() {
+    local absent=()
+    layer_shell_present || absent+=(layer-shell-qt)
+    [ "$SYSTEM_WHISPER" = 1 ] || vulkan_present || absent+=("Vulkan headers and glslc")
+    command -v wl-copy >/dev/null 2>&1 || absent+=(wl-clipboard)
+    xcb_needed_missing && absent+=("Qt's X11 plugin")
+    local IFS=,
+    printf '%s' "${absent[*]}"
+}
+
 check_system() {
     step "Checking your system"
     [ "$(uname -s)" = Linux ] || die "Sotto runs on Linux only"
-    ok "Linux $(uname -m)"
-    local missing=0 q="" cand
-    command -v cmake >/dev/null 2>&1 || missing=1
-    command -v c++ >/dev/null 2>&1 || command -v g++ >/dev/null 2>&1 || command -v clang++ >/dev/null 2>&1 || missing=1
-    for cand in qmake6 /usr/lib/qt6/bin/qmake /usr/lib64/qt6/bin/qmake qmake-qt6 qmake; do
-        if command -v "$cand" >/dev/null 2>&1 && "$cand" -query QT_VERSION 2>/dev/null | grep -q '^6\.'; then q="$cand"; break; fi
-    done
-    if [ -n "$q" ]; then
-        [ -d "$("$q" -query QT_INSTALL_LIBS)/cmake/Qt6Multimedia" ] || missing=1
-    else
-        missing=1
+    ok "Linux $(uname -m) · $(. /etc/os-release 2>/dev/null && printf '%s' "${PRETTY_NAME:-unknown distribution}")"
+    if ! build_tools_present; then
+        get_packages "CMake, a C++ compiler and Qt 6 with Multimedia are needed to build Sotto" "${BUILD_PKGS[@]}" || true
+        build_tools_present || die "the build tools are still missing — install them, then run ./install.sh again"
     fi
-    if [ "$OWN_WHISPER" = 0 ] && pkg-config --exists whisper 2>/dev/null; then SYSTEM_WHISPER=1; fi
-    if [ "$SYSTEM_WHISPER" = 0 ]; then
-        command -v git >/dev/null 2>&1 || missing=1
-        command -v ninja >/dev/null 2>&1 || missing=1
+    local qt cm
+    qt="$("$QMAKE" -query QT_VERSION)"
+    if [ "$(printf '%s\n6.5\n' "$qt" | sort -V | head -n1)" != 6.5 ]; then
+        die "Qt $qt is too old: Sotto needs Qt 6.5 or newer (Debian 13, Ubuntu 24.10, Fedora 39 and later). Use the AppImage from the releases page on this system."
     fi
-    if [ "$missing" = 1 ]; then
-        need_packages "CMake, a C++ compiler and Qt 6 with Multimedia are needed to build Sotto." \
-            "base-devel cmake ninja qt6-base qt6-multimedia qt6-wayland layer-shell-qt whisper-cpp ggml-vulkan wl-clipboard" \
-            "build-essential cmake ninja-build git qt6-base-dev qt6-multimedia-dev qt6-wayland-dev qt6-qpa-plugins liblayershellqtinterface-dev libvulkan-dev glslc wl-clipboard" \
-            "gcc-c++ cmake ninja-build git qt6-qtbase-devel qt6-qtmultimedia-devel qt6-qtwayland-devel layer-shell-qt-devel vulkan-loader-devel glslc spirv-headers-devel wl-clipboard"
+    read -r _ _ cm _ < <(cmake --version)
+    ok "CMake $cm · Qt $qt"
+    local absent
+    absent="$(missing_extras)"
+    if [ -n "$absent" ]; then
+        get_packages "missing ${absent//,/, } — for the Wayland indicator, the GPU and direct pasting" "${EXTRA_PKGS[@]}" || true
     fi
-    ok "CMake $(cmake --version | awk 'NR==1{print $3}') · Qt $("$q" -query QT_VERSION)"
     if [ "$SYSTEM_WHISPER" = 1 ]; then
         ok "whisper.cpp $(pkg-config --modversion whisper) from the system"
+    elif vulkan_present; then
+        VULKAN=ON
+        ok "whisper.cpp will be built for Sotto, with Vulkan"
     else
-        if command -v glslc >/dev/null 2>&1 && [ -e /usr/include/vulkan/vulkan.h ]; then
-            VULKAN=ON
-            ok "whisper.cpp will be built for Sotto, with Vulkan"
-        else
-            ok "whisper.cpp will be built for Sotto, CPU only"
-            info "for the GPU install the Vulkan headers and glslc, then run this again"
-        fi
+        ok "whisper.cpp will be built for Sotto, CPU only"
+        info "for the GPU install the Vulkan headers and glslc, then run this again"
     fi
-    [ -d "$("$q" -query QT_INSTALL_LIBS)/cmake/LayerShellQt" ] ||
-        warn "layer-shell-qt not found — the indicator becomes a normal window on Wayland"
-    # On GNOME Sotto runs through XWayland so that its indicator never takes the focus.
-    case "${XDG_CURRENT_DESKTOP:-}" in *GNOME*)
-        [ -e "$("$q" -query QT_INSTALL_PLUGINS)/platforms/libqxcb.so" ] ||
-            warn "Qt's X11 plugin not found (qt6-qpa-plugins on Debian/Ubuntu) — on GNOME the indicator would take the focus" ;;
-    esac
+    layer_shell_present || warn "layer-shell-qt not found — the indicator becomes a normal window on Wayland"
+    xcb_needed_missing && warn "Qt's X11 plugin not found (qt6-qpa-plugins on Debian/Ubuntu) — on GNOME the indicator would take the focus"
     command -v wl-copy >/dev/null 2>&1 || warn "wl-clipboard not found — pasting falls back to the Qt clipboard"
+    return 0
 }
 
 # ---- install --------------------------------------------------------------------------------
@@ -380,8 +488,8 @@ install_files() {
     step "Installing into $(tilde "$PREFIX")"
     mkdir -p "$BIN_DIR" "$PREFIX/share/sotto" || die "cannot create $BIN_DIR"
     [ -w "$BIN_DIR" ] || die "$(tilde "$BIN_DIR") is not writable — choose another location"
-    local was_running=0 files=()
-    pgrep -x sotto >/dev/null 2>&1 && was_running=1
+    local was_running files=()
+    was_running="$(running_here)"
     cmake --install "$BUILD_DIR/sotto" >/dev/null || die "cmake --install failed"
     mapfile -t files <"$BUILD_DIR/sotto/install_manifest.txt"
     if [ "$SYSTEM_WHISPER" = 0 ]; then
@@ -399,8 +507,8 @@ install_files() {
     ok "sotto → $(tilde "$BIN_DIR")"
     ok "menu entry and icon"
     ok "uninstall manifest"
-    if [ "$was_running" = 1 ]; then
-        stop_running
+    if [ -n "$was_running" ]; then
+        stop_running $was_running
         sleep 1
         (setsid "$BIN_DIR/sotto" >/dev/null 2>&1 &)
         ok "restarted the running Sotto"

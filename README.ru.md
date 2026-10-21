@@ -58,9 +58,10 @@ chmod +x Sotto-1.2.4-x86_64.AppImage && ./Sotto-1.2.4-x86_64.AppImage
 
 ### Из исходников
 
-Нужны CMake, компилятор C++ и Qt 6 с Multimedia. Если в дистрибутиве есть whisper.cpp
+`install.sh` проверит CMake, компилятор C++ и Qt 6.5+ с Multimedia и предложит поставить
+недостающее через pacman, apt, dnf или zypper. Если в дистрибутиве есть whisper.cpp
 (в Arch — `whisper-cpp`), Sotto использует его; иначе установщик соберёт закреплённую версию
-только для Sotto, с Vulkan, если стоят заголовки и `glslc`.
+только для Sotto, с Vulkan.
 
 ```sh
 git clone https://github.com/Trendorin/sotto && cd sotto
@@ -68,7 +69,8 @@ git clone https://github.com/Trendorin/sotto && cd sotto
 ./install.sh --uninstall     # удалит ровно то, что поставил
 ```
 
-`./install.sh --help` покажет параметры (`--yes`, `--prefix`, `--own-whisper`).
+`./install.sh --help` покажет параметры (`--yes`, `--prefix`, `--own-whisper`,
+`--no-packages`).
 
 ## Начало работы
 

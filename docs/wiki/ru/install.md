@@ -24,25 +24,33 @@ sha256sum --ignore-missing -c SHA256SUMS
 
 ## Из исходников
 
-`install.sh` собирает исходники через CMake и ставит в `~/.local`. `sudo` он не использует.
+`install.sh` собирает исходники через CMake и ставит в `~/.local`. Сам Sotto ставится без `sudo`;
+установщик просит его только для того, чтобы поставить недостающие пакеты дистрибутива. Нужен
+Qt 6.5 или новее (Debian 13, Ubuntu 24.10, Fedora 39 и новее); на более старых системах берите AppImage.
 
-| дистрибутив | зависимости для сборки |
+| дистрибутив | пакеты, которые установщик предложит поставить |
 |---|---|
-| Arch | `base-devel cmake ninja qt6-base qt6-multimedia qt6-wayland layer-shell-qt whisper-cpp ggml-vulkan wl-clipboard` |
-| Debian, Ubuntu | `build-essential cmake ninja-build git qt6-base-dev qt6-multimedia-dev qt6-wayland-dev qt6-qpa-plugins liblayershellqtinterface-dev libvulkan-dev glslc wl-clipboard` |
-| Fedora | `gcc-c++ cmake ninja-build git qt6-qtbase-devel qt6-qtmultimedia-devel qt6-qtwayland-devel layer-shell-qt-devel vulkan-loader-devel glslc spirv-headers-devel wl-clipboard` |
+| Arch | `base-devel cmake ninja qt6-base qt6-multimedia whisper-cpp ggml-vulkan qt6-wayland layer-shell-qt wl-clipboard vulkan-headers shaderc` |
+| Debian, Ubuntu | `build-essential pkg-config cmake ninja-build git ca-certificates qt6-base-dev qt6-multimedia-dev qt6-wayland-dev qt6-qpa-plugins liblayershellqtinterface-dev libvulkan-dev glslc spirv-headers wl-clipboard` |
+| Fedora | `gcc-c++ pkgconf-pkg-config cmake ninja-build git qt6-qtbase-devel qt6-qtmultimedia-devel qt6-qtwayland-devel layer-shell-qt-devel vulkan-loader-devel glslc spirv-headers-devel wl-clipboard` |
+| openSUSE | `gcc-c++ pkgconf-pkg-config cmake ninja git ca-certificates-mozilla qt6-base-devel qt6-multimedia-devel qt6-wayland-devel layer-shell-qt6-devel vulkan-devel vulkan-headers shaderc spirv-headers wl-clipboard` |
 
 ```sh
 ./install.sh                  # спросит, куда ставить
 ./install.sh --yes            # без вопросов, по умолчанию
 ./install.sh --prefix /opt/sotto
 ./install.sh --own-whisper    # собрать закреплённый whisper.cpp, даже если он есть в системе
+./install.sh --no-packages    # ничего не ставить, только назвать, чего не хватает
 ```
 
 Если системного whisper.cpp нет, установщик соберёт закреплённую версию в `<prefix>/lib/sotto`
 только для Sotto. В первый раз это занимает несколько минут; с заголовками Vulkan и `glslc`
-в сборку войдёт поддержка видеокарты, иначе — только процессор. Если не хватает чего-то ещё,
-установщик остановится и покажет команду, которая это поставит в вашем дистрибутиве.
+в сборку войдёт поддержка видеокарты, иначе — только процессор.
+
+Если чего-то не хватает, установщик назовёт это и предложит поставить (ответ по умолчанию — да,
+в том числе с `--yes`). Без терминала и без `sudo` без пароля он вместо этого покажет команду.
+Инструменты сборки обязательны; без остального Sotto работает, но индикатор на Wayland будет
+обычным окном, whisper.cpp — считать на процессоре, а вставка пойдёт через буфер обмена Qt.
 
 Запущенный Sotto после обновления перезапускается.
 

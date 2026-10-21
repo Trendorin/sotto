@@ -43,3 +43,35 @@ jobs:
 
       - name: Scripts parse
         run: for f in install.sh packaging/*.sh packaging/*/*.sh .github/release-notes.sh; do bash -n "$f"; done
+
+  installer:
+    name: install.sh on ${{ matrix.image }}
+    runs-on: ubuntu-24.04
+    container: ${{ matrix.image }}
+    strategy:
+      fail-fast: false
+      matrix:
+        image: [archlinux:latest, debian:trixie, ubuntu:26.04, fedora:44, opensuse/tumbleweed]
+    steps:
+      - name: What the checkout step needs
+        run: if command -v zypper >/dev/null; then zypper -n install tar gzip findutils; fi
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      # A fresh system: install.sh itself has to bring in every package it needs, and outside Arch
+      # it builds the pinned whisper.cpp.
+      - name: Install from a bare image
+        run: |
+          if command -v pacman >/dev/null; then pacman -Syu --noconfirm; fi
+          ./install.sh --yes --prefix /opt/sotto
+
+      - name: Run
+        run: |
+          QT_QPA_PLATFORM=offscreen /opt/sotto/bin/sotto --version
+          QT_QPA_PLATFORM=offscreen SOTTO_LANG=en /opt/sotto/bin/sotto --help | grep -q "Start or stop dictation"
+
+      - name: Uninstall leaves no files
+        run: |
+          ./install.sh --uninstall --yes --prefix /opt/sotto
+          # Menu and icon caches are shared with other programs and only refreshed.
+          test -z "$(find /opt/sotto -type f ! -name mimeinfo.cache ! -name icon-theme.cache)"

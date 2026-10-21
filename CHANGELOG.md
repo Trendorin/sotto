@@ -5,6 +5,20 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- `install.sh` offers to install missing build tools and libraries with pacman, apt, dnf or zypper
+  (openSUSE is new) instead of stopping with a command to copy, and then the optional parts too:
+  layer-shell-qt, the Vulkan headers and `glslc`, `wl-clipboard`. `--no-packages` turns that off.
+  It now says up front when Qt is older than 6.5 and points to the AppImage.
+- CI installs Sotto with `install.sh` on bare Arch, Debian 13, Ubuntu 26.04, Fedora 44 and
+  openSUSE Tumbleweed images, runs it and uninstalls it.
+
+### Fixed
+- `install.sh --prefix DIR` and `install.sh --uninstall --prefix DIR` stopped or restarted the
+  Sotto running from another place, and the uninstall also removed its autostart entry and KDE
+  shortcut. Now only the Sotto of that prefix is stopped, and autostart, shortcut, models and
+  settings stay as long as another Sotto is installed.
+
 ## [1.2.4] — 2026-10-21
 
 ### Fixed

@@ -58,9 +58,10 @@ it adds itself to the menu, which the portals need to grant a hotkey.
 
 ### From source
 
-You need CMake, a C++ compiler and Qt 6 with Multimedia. If your distribution has whisper.cpp
+`install.sh` checks for CMake, a C++ compiler and Qt 6.5+ with Multimedia, and offers to install
+whatever is missing with pacman, apt, dnf or zypper. If your distribution has whisper.cpp
 (Arch: `whisper-cpp`), Sotto uses it; otherwise the installer builds the pinned version for Sotto
-alone, with Vulkan when the headers and `glslc` are installed.
+alone, with Vulkan.
 
 ```sh
 git clone https://github.com/Trendorin/sotto && cd sotto
@@ -68,7 +69,8 @@ git clone https://github.com/Trendorin/sotto && cd sotto
 ./install.sh --uninstall     # removes exactly what it installed
 ```
 
-`./install.sh --help` lists the options (`--yes`, `--prefix`, `--own-whisper`).
+`./install.sh --help` lists the options (`--yes`, `--prefix`, `--own-whisper`,
+`--no-packages`).
 
 ## Getting started
 
