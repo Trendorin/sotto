@@ -2,7 +2,7 @@
 #
 # Builds the source tree this file lives in:  cd packaging/arch && makepkg -si
 pkgname=sotto
-pkgver=1.2.4
+pkgver=1.2.5
 pkgrel=1
 pkgdesc='Voice typing for Linux: press a key, speak, the text appears where the cursor is (whisper.cpp, Qt 6)'
 arch=('x86_64')

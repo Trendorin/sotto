@@ -5,6 +5,8 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.2.5] — 2026-10-21
+
 ### Added
 - `install.sh` offers to install missing build tools and libraries with pacman, apt, dnf or zypper
   (openSUSE is new) instead of stopping with a command to copy, and then the optional parts too:
@@ -129,7 +131,8 @@ First public release. Compared with the private 0.x builds:
   any other AppImage inherit it, so a packaged Sotto could point its menu entry at, or remove,
   someone else's AppImage. Sotto now checks that it really runs from inside that AppImage.
 
-[Unreleased]: https://github.com/Trendorin/sotto/compare/v1.2.4...HEAD
+[Unreleased]: https://github.com/Trendorin/sotto/compare/v1.2.5...HEAD
+[1.2.5]: https://github.com/Trendorin/sotto/releases/tag/v1.2.5
 [1.2.4]: https://github.com/Trendorin/sotto/releases/tag/v1.2.4
 [1.2.3]: https://github.com/Trendorin/sotto/releases/tag/v1.2.3
 [1.2.2]: https://github.com/Trendorin/sotto/releases/tag/v1.2.2
