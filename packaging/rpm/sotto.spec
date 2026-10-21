@@ -9,7 +9,7 @@
 %global _lto_cflags %{nil}
 
 Name:           sotto
-Version:        1.2.2
+Version:        1.2.3
 Release:        1%{?dist}
 Summary:        Voice typing for Linux with whisper.cpp
 License:        MIT
@@ -69,6 +69,10 @@ rm -rf %{buildroot}%{_datadir}/licenses
 %{_datadir}/icons/hicolor/scalable/apps/io.github.trendorin.Sotto.svg
 
 %changelog
+* Wed Oct 21 2026 Trendorin <193045225+Trendorin@users.noreply.github.com> - 1.2.3-1
+- Choice of GPU and a hint when a graphics card is not usable
+- GNOME: the recording indicator no longer takes the focus
+
 * Wed Oct 21 2026 Trendorin <193045225+Trendorin@users.noreply.github.com> - 1.2.2-1
 - Use the discrete GPU on laptops that also have an integrated one
 

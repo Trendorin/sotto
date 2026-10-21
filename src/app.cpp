@@ -24,6 +24,12 @@ static QIcon themedIcon(const char *name, const char *fallback)
                                                                         QIcon(QStringLiteral(":/sotto.svg"))));
 }
 
+// The GPU chosen in the settings, -1 for the CPU.
+static int configuredGpu()
+{
+    return Config::useGpu() ? Transcriber::gpu(Config::gpuDevice()).index : -1;
+}
+
 // Loudest 20 ms window, as RMS. Used to skip whisper on pure silence,
 // where it tends to invent text.
 static float peakRms(const std::vector<float> &pcm)
@@ -119,11 +125,18 @@ void App::start()
         m_output->prepare();
 
     const QString model = Config::model();
-    if (Transcriber::gpuName().isEmpty() && (model.startsWith(QLatin1String("large")) || model.startsWith(QLatin1String("medium"))))
-        m_tray->showMessage(tr("The GPU is not used"),
-                            tr("The %1 model is slow on a CPU. Install a Vulkan driver "
-                               "or choose the Small model in Settings.").arg(Models::find(model).title),
-                            QSystemTrayIcon::Warning, 10000);
+    const QString hint = Transcriber::missingGpuHint();
+    if ((Transcriber::gpus().isEmpty() || !hint.isEmpty())
+        && (model.startsWith(QLatin1String("large")) || model.startsWith(QLatin1String("medium")))) {
+        if (Transcriber::gpus().isEmpty())
+            m_tray->showMessage(tr("The GPU is not used"),
+                                hint.isEmpty() ? tr("The %1 model is slow on a CPU. Install a Vulkan driver "
+                                                    "or choose the Small model in Settings.").arg(Models::find(model).title)
+                                               : hint,
+                                QSystemTrayIcon::Warning, 10000);
+        else
+            m_tray->showMessage(tr("The discrete GPU is not used"), hint, QSystemTrayIcon::Warning, 10000);
+    }
 }
 
 void App::uninstall()
@@ -192,7 +205,7 @@ void App::startRecording()
         return;
 
     m_unloadTimer.stop();
-    m_transcriber->preload(Models::path(model), Config::useGpu()); // warm up while the user talks
+    m_transcriber->preload(Models::path(model), configuredGpu()); // warm up while the user talks
     m_overlay->showRecording();
     setState(State::Recording);
 }
@@ -222,7 +235,7 @@ void App::stopRecording()
     setState(State::Transcribing);
     m_overlay->showBusy();
     const bool vad = Config::useVad() && Models::isInstalled(Models::VadId);
-    m_transcriber->transcribe(std::move(pcm), {Models::path(Config::model()), Config::useGpu(), Config::language(),
+    m_transcriber->transcribe(std::move(pcm), {Models::path(Config::model()), configuredGpu(), Config::language(),
                                                Config::prompt(), vad ? Models::path(Models::VadId) : QString()});
 }
 
@@ -249,11 +262,17 @@ void App::onTranscribed(const QString &text)
         m_overlay->showMessage(tr("Nothing recognized"));
         return;
     }
-    if (Config::autoPaste())
-        m_overlay->dismiss();
-    else
+    if (!Config::autoPaste()) {
         m_overlay->showMessage(tr("Copied: %1").arg(text));
-    m_output->deliver(text);
+        m_output->deliver(text);
+    } else if (m_overlay->takesFocus() && m_overlay->isVisible()) {
+        // The compositor hands the focus back to the user's window only once the indicator is unmapped.
+        m_overlay->hideNow();
+        QTimer::singleShot(250, m_output, [this, text] { m_output->deliver(text); });
+    } else {
+        m_overlay->dismiss();
+        m_output->deliver(text);
+    }
 }
 
 void App::onError(const QString &message)

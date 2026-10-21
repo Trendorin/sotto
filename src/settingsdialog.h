@@ -52,7 +52,7 @@ private:
     QPlainTextEdit *m_downloadLog;
     QCheckBox *m_vad;
     QComboBox *m_language;
-    QCheckBox *m_gpu;
+    QComboBox *m_gpu;
     QLineEdit *m_prompt;
 
     QComboBox *m_microphone;

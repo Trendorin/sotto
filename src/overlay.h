@@ -24,6 +24,11 @@ public:
     void showBusy();
     void showMessage(const QString &text, bool error = false);
     void dismiss();
+    void hideNow();
+
+    // A plain Wayland window (GNOME without XWayland, compositors without layer-shell): the
+    // compositor focuses it, so it must be gone before keys are sent to the user's window.
+    bool takesFocus() const { return m_takesFocus; }
 
     void pushLevel(float level);
     void setProgress(int percent);
@@ -57,6 +62,7 @@ private:
     Mode m_mode = Mode::Recording;
     LayerShellQt::Window *m_layer = nullptr;
     bool m_canPosition = true;
+    bool m_takesFocus = false;
 
     QTimer m_frame;
     QTimer m_messageTimer;

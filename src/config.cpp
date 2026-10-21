@@ -36,6 +36,8 @@ void setLanguage(const QString &code) { set("language", code); }
 
 bool useGpu() { return get("gpu", true).toBool(); }
 void setUseGpu(bool on) { set("gpu", on); }
+QString gpuDevice() { return get("gpuDevice").toString(); }
+void setGpuDevice(const QString &key) { set("gpuDevice", key); }
 
 QByteArray inputDevice() { return get("inputDevice").toByteArray(); }
 void setInputDevice(const QByteArray &id) { set("inputDevice", id); }

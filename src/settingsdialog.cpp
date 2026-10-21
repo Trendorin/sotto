@@ -45,8 +45,8 @@ SettingsDialog::SettingsDialog(ModelDownloader *downloader, GlobalShortcut *shor
     setWindowIcon(QIcon::fromTheme(QString::fromLatin1(Config::AppId), QIcon(QStringLiteral(":/sotto.svg"))));
     setAttribute(Qt::WA_DeleteOnClose);
 
-    const QString gpu = Transcriber::gpuName();
-    m_haveGpu = !gpu.isEmpty();
+    const QList<Transcriber::Gpu> &gpus = Transcriber::gpus();
+    m_haveGpu = !gpus.isEmpty();
 
     // Recognition
     auto *recognition = new QGroupBox(tr("Recognition"));
@@ -107,12 +107,23 @@ SettingsDialog::SettingsDialog(ModelDownloader *downloader, GlobalShortcut *shor
     }
     recForm->addRow(tr("Language:"), m_language);
 
-    m_gpu = new QCheckBox(m_haveGpu ? tr("Use the GPU (%1)").arg(gpu) : tr("Use the GPU"));
+    m_gpu = new QComboBox;
+    if (m_haveGpu)
+        m_gpu->addItem(tr("Automatic — %1").arg(gpus.constFirst().name), QString());
+    for (const Transcriber::Gpu &g : gpus)
+        m_gpu->addItem(QStringLiteral("%1 (%2)").arg(g.name, g.key.section(QLatin1Char('/'), 0, 0)), g.key);
+    m_gpu->addItem(tr("Processor only"), QStringLiteral("cpu"));
     m_gpu->setEnabled(m_haveGpu);
     recForm->addRow(tr("Acceleration:"), m_gpu);
     if (!m_haveGpu) {
         auto *warning = new QLabel(tr("⚠ No GPU in use — Large models are slow on a CPU.<br>"
                                       "Install a Vulkan driver (on Arch also <b>ggml-vulkan</b>) or choose Small."));
+        recForm->addRow(QString(), warning);
+    }
+    if (const QString missing = Transcriber::missingGpuHint(); !missing.isEmpty()) {
+        auto *warning = new QLabel(QStringLiteral("⚠ ") + missing);
+        warning->setTextFormat(Qt::PlainText);
+        warning->setWordWrap(true);
         recForm->addRow(QString(), warning);
     }
 
@@ -286,7 +297,10 @@ void SettingsDialog::load()
     updatePasteAccess();
     fillModels();
     m_language->setCurrentIndex(std::max(0, m_language->findData(Config::language())));
-    m_gpu->setChecked(m_haveGpu && Config::useGpu());
+    const QString gpu = !m_haveGpu || !Config::useGpu() ? QStringLiteral("cpu") : Config::gpuDevice();
+    if (m_gpu->findData(gpu) < 0) // chosen earlier, missing now: keep the choice
+        m_gpu->insertItem(m_gpu->count() - 1, tr("%1 (not found)").arg(gpu.section(QLatin1Char('/'), 1)), gpu);
+    m_gpu->setCurrentIndex(m_gpu->findData(gpu));
     m_prompt->setText(Config::prompt());
     m_microphone->setCurrentIndex(std::max(0, m_microphone->findData(Config::inputDevice())));
     updateShortcutLabel();
@@ -393,8 +407,12 @@ void SettingsDialog::accept()
 {
     Config::setModel(selectedModel());
     Config::setLanguage(m_language->currentData().toString());
-    if (m_haveGpu)
-        Config::setUseGpu(m_gpu->isChecked());
+    if (m_haveGpu) {
+        const QString gpu = m_gpu->currentData().toString();
+        Config::setUseGpu(gpu != QLatin1String("cpu"));
+        if (gpu != QLatin1String("cpu"))
+            Config::setGpuDevice(gpu);
+    }
     Config::setPrompt(m_prompt->text().trimmed());
     Config::setInputDevice(m_microphone->currentData().toByteArray());
     Config::setAutoPaste(m_paste->isChecked());

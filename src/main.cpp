@@ -15,6 +15,15 @@ Q_LOGGING_CATEGORY(lcSotto, "sotto", QtInfoMsg)
 
 int main(int argc, char *argv[])
 {
+    // GNOME has no layer-shell, so on Wayland the indicator would be an ordinary window: mutter gives it
+    // the focus, and wl-copy has to focus a window of its own to set the clipboard, so the paste keys
+    // land there instead of in the user's window. Through XWayland the indicator is an override-redirect
+    // window that never takes the focus and the clipboard is set without one. QT_QPA_PLATFORM still wins;
+    // without the xcb plugin Qt falls back to Wayland.
+    if (qEnvironmentVariable("XDG_CURRENT_DESKTOP").contains(QLatin1String("GNOME")) && qEnvironmentVariableIsSet("WAYLAND_DISPLAY")
+        && qEnvironmentVariableIsSet("DISPLAY") && !qEnvironmentVariableIsSet("QT_QPA_PLATFORM"))
+        qputenv("QT_QPA_PLATFORM", "xcb;wayland");
+
     QApplication::setOrganizationName(QStringLiteral("sotto"));
     QApplication::setApplicationName(QStringLiteral("sotto"));
     QApplication::setApplicationVersion(QStringLiteral(SOTTO_VERSION));

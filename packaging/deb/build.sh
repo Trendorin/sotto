@@ -46,7 +46,7 @@ Version: $VERSION-1
 Architecture: $ARCH
 Maintainer: Trendorin <193045225+Trendorin@users.noreply.github.com>
 Installed-Size: $(du -sk "$PKG" | cut -f1)
-Depends: $SHLIBS, qt6-wayland, layer-shell-qt
+Depends: $SHLIBS, qt6-wayland, qt6-qpa-plugins, layer-shell-qt
 Recommends: wl-clipboard, xdg-desktop-portal, pkexec
 Section: utils
 Priority: optional

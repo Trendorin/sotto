@@ -10,6 +10,7 @@
 #include <QProcess>
 #include <QStandardPaths>
 #include <QTimer>
+#include <QWindow>
 
 static const QString Iface = QStringLiteral("org.freedesktop.portal.RemoteDesktop");
 
@@ -21,7 +22,26 @@ TextOutput::TextOutput(QObject *parent)
 {
 }
 
+TextOutput::~TextOutput() = default;
+
 void TextOutput::deliver(const QString &text)
+{
+    if (QGuiApplication::platformName() == QLatin1String("xcb")) {
+        // X ignores a new selection owner stamped earlier than the last change, and Qt stamps the
+        // clipboard with the time of the last X event it saw, which may be older than a copy made since
+        // in another program. Change a property of a window of ours so the server sends a fresh time.
+        if (!m_stamp) {
+            m_stamp = std::make_unique<QWindow>();
+            m_stamp->create();
+        }
+        m_stamp->setTitle(m_stamp->title() == QLatin1String("a") ? QStringLiteral("b") : QStringLiteral("a"));
+        QTimer::singleShot(30, this, [this, text] { copyAndPaste(text); });
+        return;
+    }
+    copyAndPaste(text);
+}
+
+void TextOutput::copyAndPaste(const QString &text)
 {
     if (!copyToClipboard(text)) {
         Q_EMIT failed(tr("Could not copy the text to the clipboard"));

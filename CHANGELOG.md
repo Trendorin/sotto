@@ -5,6 +5,26 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.2.3] — 2026-10-21
+
+### Added
+- **Choice of GPU** (Settings → Acceleration): automatic (the discrete one), any GPU ggml sees, or the
+  processor only.
+- When a graphics card in the computer is missing from that list, the settings say why: the NVIDIA driver
+  is not loaded or the card is switched off (integrated-only mode), the driver was updated and needs a
+  restart, its Vulkan part is not installed, the card runs on nouveau, or ggml's GPU part is missing.
+
+### Fixed
+- GNOME: the recording indicator took the focus, so the text was pasted into it instead of your window
+  and you had to click the window first. GNOME has no layer-shell, so on Wayland the indicator was an
+  ordinary window that mutter focuses, and wl-copy focuses a window of its own to set the clipboard.
+  On GNOME Sotto now runs through XWayland: the indicator never takes the focus, can be dragged anywhere
+  and remembers its place, and the clipboard is set without a window. `QT_QPA_PLATFORM=wayland` turns
+  this off. Without XWayland the indicator is hidden before the text is pasted.
+- On X11 the indicator is now kept out of the window manager's hands, so no window manager can focus it.
+- The Debian package and the installer pull in Qt's X11 plugin (`qt6-qpa-plugins`); the release
+  workflow checks that the AppImage carries it.
+
 ## [1.2.2] — 2026-10-21
 
 ### Fixed
@@ -86,7 +106,8 @@ First public release. Compared with the private 0.x builds:
   any other AppImage inherit it, so a packaged Sotto could point its menu entry at, or remove,
   someone else's AppImage. Sotto now checks that it really runs from inside that AppImage.
 
-[Unreleased]: https://github.com/Trendorin/sotto/compare/v1.2.2...HEAD
+[Unreleased]: https://github.com/Trendorin/sotto/compare/v1.2.3...HEAD
+[1.2.3]: https://github.com/Trendorin/sotto/releases/tag/v1.2.3
 [1.2.2]: https://github.com/Trendorin/sotto/releases/tag/v1.2.2
 [1.2.1]: https://github.com/Trendorin/sotto/releases/tag/v1.2.1
 [1.2.0]: https://github.com/Trendorin/sotto/releases/tag/v1.2.0

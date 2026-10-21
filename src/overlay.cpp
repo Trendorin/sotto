@@ -27,6 +27,10 @@ Overlay::Overlay(QWidget *parent)
     setWindowTitle(QStringLiteral("Sotto"));
 
     const bool wayland = QGuiApplication::platformName() == QLatin1String("wayland");
+    // On X11 (and XWayland) keep the window manager out entirely: an override-redirect window is
+    // never given the focus, while some window managers still focus a Tool window on map.
+    if (QGuiApplication::platformName() == QLatin1String("xcb"))
+        setWindowFlag(Qt::X11BypassWindowManagerHint);
 #ifdef SOTTO_HAVE_LAYERSHELL
     const bool gnome = qEnvironmentVariable("XDG_CURRENT_DESKTOP").contains(QLatin1String("GNOME"));
     if (wayland && !gnome) {
@@ -41,6 +45,7 @@ Overlay::Overlay(QWidget *parent)
     }
 #endif
     m_canPosition = m_layer || !wayland;
+    m_takesFocus = wayland && !m_layer;
 
     m_frame.setTimerType(Qt::PreciseTimer);
     m_frame.setInterval(16);
@@ -115,6 +120,7 @@ void Overlay::appear()
         m_opacity = 0.0;
         show();
     }
+    raise(); // an override-redirect window stays under windows raised since it was mapped
     if (!m_frame.isActive())
         m_frame.start();
     m_fade.stop();
@@ -123,6 +129,16 @@ void Overlay::appear()
     m_fade.setEndValue(1.0);
     m_fade.start();
     update();
+}
+
+void Overlay::hideNow()
+{
+    m_messageTimer.stop();
+    m_fade.stop();
+    m_opacity = 0.0;
+    endGrab();
+    hide();
+    m_frame.stop();
 }
 
 void Overlay::pushLevel(float level)

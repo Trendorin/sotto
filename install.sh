@@ -331,7 +331,7 @@ check_system() {
     if [ "$missing" = 1 ]; then
         need_packages "CMake, a C++ compiler and Qt 6 with Multimedia are needed to build Sotto." \
             "base-devel cmake ninja qt6-base qt6-multimedia qt6-wayland layer-shell-qt whisper-cpp ggml-vulkan wl-clipboard" \
-            "build-essential cmake ninja-build git qt6-base-dev qt6-multimedia-dev qt6-wayland-dev liblayershellqtinterface-dev libvulkan-dev glslc wl-clipboard" \
+            "build-essential cmake ninja-build git qt6-base-dev qt6-multimedia-dev qt6-wayland-dev qt6-qpa-plugins liblayershellqtinterface-dev libvulkan-dev glslc wl-clipboard" \
             "gcc-c++ cmake ninja-build git qt6-qtbase-devel qt6-qtmultimedia-devel qt6-qtwayland-devel layer-shell-qt-devel vulkan-loader-devel glslc spirv-headers-devel wl-clipboard"
     fi
     ok "CMake $(cmake --version | awk 'NR==1{print $3}') · Qt $("$q" -query QT_VERSION)"
@@ -348,6 +348,11 @@ check_system() {
     fi
     [ -d "$("$q" -query QT_INSTALL_LIBS)/cmake/LayerShellQt" ] ||
         warn "layer-shell-qt not found — the indicator becomes a normal window on Wayland"
+    # On GNOME Sotto runs through XWayland so that its indicator never takes the focus.
+    case "${XDG_CURRENT_DESKTOP:-}" in *GNOME*)
+        [ -e "$("$q" -query QT_INSTALL_PLUGINS)/platforms/libqxcb.so" ] ||
+            warn "Qt's X11 plugin not found (qt6-qpa-plugins on Debian/Ubuntu) — on GNOME the indicator would take the focus" ;;
+    esac
     command -v wl-copy >/dev/null 2>&1 || warn "wl-clipboard not found — pasting falls back to the Qt clipboard"
 }
 

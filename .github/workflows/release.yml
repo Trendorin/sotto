@@ -172,6 +172,7 @@ jobs:
           "$img" --appimage-extract >/dev/null
           test -f squashfs-root/usr/plugins/wayland-shell-integration/libxdg-shell.so
           test -f squashfs-root/usr/plugins/platforms/libqwayland-generic.so
+          test -f squashfs-root/usr/plugins/platforms/libqxcb.so
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:

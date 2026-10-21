@@ -20,6 +20,8 @@ void setLanguage(const QString &code);
 
 bool useGpu();
 void setUseGpu(bool on);
+QString gpuDevice();           // Transcriber::Gpu::key, empty = pick the best one
+void setGpuDevice(const QString &key);
 
 QByteArray inputDevice();      // empty = system default
 void setInputDevice(const QByteArray &id);

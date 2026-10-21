@@ -29,7 +29,7 @@ sha256sum --ignore-missing -c SHA256SUMS
 | дистрибутив | зависимости для сборки |
 |---|---|
 | Arch | `base-devel cmake ninja qt6-base qt6-multimedia qt6-wayland layer-shell-qt whisper-cpp ggml-vulkan wl-clipboard` |
-| Debian, Ubuntu | `build-essential cmake ninja-build git qt6-base-dev qt6-multimedia-dev qt6-wayland-dev liblayershellqtinterface-dev libvulkan-dev glslc wl-clipboard` |
+| Debian, Ubuntu | `build-essential cmake ninja-build git qt6-base-dev qt6-multimedia-dev qt6-wayland-dev qt6-qpa-plugins liblayershellqtinterface-dev libvulkan-dev glslc wl-clipboard` |
 | Fedora | `gcc-c++ cmake ninja-build git qt6-qtbase-devel qt6-qtmultimedia-devel qt6-qtwayland-devel layer-shell-qt-devel vulkan-loader-devel glslc spirv-headers-devel wl-clipboard` |
 
 ```sh
