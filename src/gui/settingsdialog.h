@@ -7,6 +7,7 @@ class ModelDownloader;
 class TextOutput;
 class QCheckBox;
 class QComboBox;
+class QFormLayout;
 class QLabel;
 class QLineEdit;
 class QPlainTextEdit;
@@ -58,6 +59,8 @@ private:
     QComboBox *m_language;
     QComboBox *m_gpu;
     QLineEdit *m_prompt;
+    QFormLayout *m_recognitionForm;
+    QList<QWidget *> m_whisperRows; // rows shown only for Whisper models
 
     QComboBox *m_microphone;
     QLabel *m_shortcutLabel;

@@ -5,6 +5,14 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+- Settings: with GigaAM or Parakeet the Whisper-only rows (language, GPU, vocabulary) are hidden
+  instead of greyed out, and the download log takes the free room.
+
+### Fixed
+- The Cancel button of the settings was not translated into Russian.
+- The Fedora package did not build: rpm's strip choked on the prebuilt ONNX Runtime library.
+
 ## [2.0.0] — 2026-10-22
 
 ### Added

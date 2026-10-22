@@ -16,7 +16,7 @@ Voice typing for Linux, local and fast.
 
 </div>
 
-<p align="center"><img src=".github/assets/screenshot.png" width="620" alt="Sotto settings: the GigaAM v3 model, source, language, GPU and vocabulary"></p>
+<p align="center"><img src=".github/assets/screenshot.png" width="620" alt="Sotto settings: GigaAM v3 downloaded and ready, its source and the download log"></p>
 
 Press a key, speak, and the text appears where the cursor is — phrase by phrase, while you are
 still talking. Sotto (as in *sotto voce*) lives in the tray, listens only while you hold or toggle

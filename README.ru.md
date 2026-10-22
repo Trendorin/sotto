@@ -16,7 +16,7 @@
 
 </div>
 
-<p align="center"><img src=".github/assets/screenshot-ru.png" width="620" alt="Настройки Sotto: модель GigaAM v3, источник, язык, видеокарта и словарь"></p>
+<p align="center"><img src=".github/assets/screenshot-ru.png" width="620" alt="Настройки Sotto: GigaAM v3 скачана и готова, источник и журнал загрузки"></p>
 
 Нажмите клавишу, говорите — и текст появляется там, где стоит курсор, фраза за фразой, пока вы
 ещё говорите. Sotto (от *sotto voce*, «вполголоса») живёт в трее, слушает только пока вы держите

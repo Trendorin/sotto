@@ -39,13 +39,15 @@ static QLabel *hint(const QString &text)
     return label;
 }
 
-// A tab page: the form, then a stretch so it stays at the top.
-static QWidget *page(QFormLayout *form)
+// A tab page: the form, then a stretch so it stays at the top, or, with `fill`, the form gets the
+// room the taller tabs need (for a field that grows, like the download log).
+static QWidget *page(QFormLayout *form, bool fill = false)
 {
     auto *w = new QWidget;
     auto *l = new QVBoxLayout(w);
-    l->addLayout(form);
-    l->addStretch();
+    l->addLayout(form, fill ? 1 : 0);
+    if (!fill)
+        l->addStretch();
     return w;
 }
 
@@ -65,8 +67,12 @@ SettingsDialog::SettingsDialog(ModelDownloader *downloader, GlobalShortcut *shor
     tabs->addTab(recognitionPage(), tr("Recognition"));
     tabs->addTab(recordingPage(), tr("Recording and pasting"));
     tabs->addTab(generalPage(), tr("General"));
+    // tools/screenshots.sh opens the dialog on a given tab.
+    tabs->setCurrentIndex(qEnvironmentVariableIntValue("SOTTO_SETTINGS_TAB"));
 
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
+    // Qt's own button texts need Qt's translations, which Sotto does not ship.
+    buttons->button(QDialogButtonBox::Cancel)->setText(tr("Cancel"));
     connect(buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);
     connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
 
@@ -81,6 +87,7 @@ SettingsDialog::SettingsDialog(ModelDownloader *downloader, GlobalShortcut *shor
 QWidget *SettingsDialog::recognitionPage()
 {
     auto *form = new QFormLayout;
+    m_recognitionForm = form;
 
     m_model = new QComboBox;
     m_model->setSizeAdjustPolicy(QComboBox::AdjustToContents);
@@ -123,7 +130,7 @@ QWidget *SettingsDialog::recognitionPage()
 
     m_downloadLog = new QPlainTextEdit;
     m_downloadLog->setReadOnly(true);
-    m_downloadLog->setMaximumHeight(96);
+    m_downloadLog->setMinimumHeight(96);
     m_downloadLog->setLineWrapMode(QPlainTextEdit::NoWrap);
     m_downloadLog->setPlaceholderText(tr("The download log appears here: server, redirects, checksum."));
     m_downloadLog->setToolTip(tr("Also saved to %1").arg(Models::logFile()));
@@ -138,6 +145,7 @@ QWidget *SettingsDialog::recognitionPage()
         m_language->addItem(name, QString::fromLatin1(code));
     }
     form->addRow(tr("Language:"), m_language);
+    m_whisperRows << m_language;
 
     const QList<Gpu::Device> &gpus = Gpu::devices();
     m_gpu = new QComboBox;
@@ -147,21 +155,28 @@ QWidget *SettingsDialog::recognitionPage()
         m_gpu->addItem(QStringLiteral("%1 (%2)").arg(g.name, g.key.section(QLatin1Char('/'), 0, 0)), g.key);
     m_gpu->addItem(tr("Processor only"), QStringLiteral("cpu"));
     form->addRow(tr("Acceleration:"), m_gpu);
-    if (!m_haveGpu)
-        form->addRow(QString(), hint(tr("No GPU for Whisper: install a Vulkan driver (on Arch also ggml-vulkan). "
-                                        "GigaAM and Parakeet are fast on the processor anyway.")));
+    m_whisperRows << m_gpu;
+    if (!m_haveGpu) {
+        QLabel *noGpu = hint(tr("No GPU for Whisper: install a Vulkan driver (on Arch also ggml-vulkan). "
+                                "GigaAM and Parakeet are fast on the processor anyway."));
+        form->addRow(QString(), noGpu);
+        m_whisperRows << noGpu;
+    }
     if (const QString missing = Gpu::missingHint(); !missing.isEmpty()) {
         auto *warning = new QLabel(QStringLiteral("⚠ ") + missing);
         warning->setTextFormat(Qt::PlainText);
         warning->setWordWrap(true);
         form->addRow(QString(), warning);
+        m_whisperRows << warning;
     }
 
     m_prompt = new QLineEdit;
     m_prompt->setPlaceholderText(tr("For example: Kubernetes, Grafana, Jane Doe"));
     m_prompt->setClearButtonEnabled(true);
     form->addRow(tr("Vocabulary:"), m_prompt);
-    form->addRow(QString(), hint(tr("Names and terms you often say — Whisper will spell them correctly.")));
+    QLabel *promptHint = hint(tr("Names and terms you often say — Whisper will spell them correctly."));
+    form->addRow(QString(), promptHint);
+    m_whisperRows << m_prompt << promptHint;
 
     connect(openFolder, &QPushButton::clicked, this, [] {
         QDir().mkpath(Models::dir());
@@ -206,7 +221,7 @@ QWidget *SettingsDialog::recognitionPage()
             QMessageBox::warning(this, tr("Model download"), tr("Could not download the model:\n%1").arg(error));
         fillModels();
     });
-    return page(form);
+    return page(form, true);
 }
 
 QWidget *SettingsDialog::recordingPage()
@@ -427,10 +442,11 @@ void SettingsDialog::updateModelRow()
         note += QLatin1Char('\n') + (info.language == QLatin1String("ru") ? tr("Recognises Russian; runs on the processor.")
                                                                           : tr("Finds the language itself; runs on the processor."));
     m_modelNote->setText(note);
-    // Language, GPU and vocabulary are Whisper settings.
-    m_language->setEnabled(whisper);
-    m_gpu->setEnabled(whisper && m_haveGpu);
-    m_prompt->setEnabled(whisper);
+    // Language, GPU and vocabulary are Whisper settings: hidden for GigaAM and Parakeet, whose note
+    // above already says they run on the processor.
+    for (QWidget *row : std::as_const(m_whisperRows))
+        m_recognitionForm->setRowVisible(row, whisper);
+    m_gpu->setEnabled(m_haveGpu);
     updateSourceLink();
 }
 
