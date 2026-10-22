@@ -5,6 +5,20 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [2.0.1] — 2026-10-22
+
+2.0.0 was tagged but never published: its Fedora package failed to build. 2.0.1 is the first
+release with everything listed under [2.0.0](https://github.com/Trendorin/sotto/blob/main/CHANGELOG.md#200--2026-10-22):
+the GigaAM v3 and Parakeet TDT v3 models, text typed while you speak, and tiling compositors.
+
+### Fixed
+- **Start at login did nothing** for Sotto installed by `install.sh` into `~/.local`: the
+  autostart entry named a bare `sotto`, and the autostart looks programs up without
+  `~/.local/bin`. The entry now holds the full path, and an old one is repaired on the next start.
+  The compositor key binding lines get the full path for the same reason.
+- The Fedora package builds again: rpm's strip no longer touches the prebuilt sherpa-onnx
+  libraries (their missing build-id stopped the build).
+
 ## [2.0.0] — 2026-10-22
 
 ### Added
@@ -192,7 +206,8 @@ First public release. Compared with the private 0.x builds:
   any other AppImage inherit it, so a packaged Sotto could point its menu entry at, or remove,
   someone else's AppImage. Sotto now checks that it really runs from inside that AppImage.
 
-[Unreleased]: https://github.com/Trendorin/sotto/compare/v2.0.0...HEAD
+[Unreleased]: https://github.com/Trendorin/sotto/compare/v2.0.1...HEAD
+[2.0.1]: https://github.com/Trendorin/sotto/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/Trendorin/sotto/releases/tag/v2.0.0
 [1.2.5]: https://github.com/Trendorin/sotto/releases/tag/v1.2.5
 [1.2.4]: https://github.com/Trendorin/sotto/releases/tag/v1.2.4

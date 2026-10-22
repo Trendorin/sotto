@@ -10,7 +10,7 @@
 %global _lto_cflags %{nil}
 
 Name:           sotto
-Version:        2.0.0
+Version:        2.0.1
 Release:        1%{?dist}
 Summary:        Voice typing for Linux: the text appears while you speak
 License:        MIT
@@ -89,6 +89,10 @@ rm -rf %{buildroot}%{_datadir}/licenses
 %{_datadir}/icons/hicolor/scalable/apps/io.github.trendorin.Sotto.svg
 
 %changelog
+* Thu Oct 22 2026 Trendorin <193045225+Trendorin@users.noreply.github.com> - 2.0.1-1
+- Start at login works for Sotto in ~/.local/bin
+- First published build of 2.0.0: the Fedora package builds with the prebuilt sherpa-onnx libraries
+
 * Thu Oct 22 2026 Trendorin <193045225+Trendorin@users.noreply.github.com> - 2.0.0-1
 - GigaAM v3 and Parakeet TDT v3 through sherpa-onnx, next to Whisper
 - Live typing: every phrase appears as soon as you pause

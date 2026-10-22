@@ -130,11 +130,19 @@ static QString execQuoted(QString path)
     return QLatin1Char('"') + path + QLatin1Char('"');
 }
 
+// Autostart (systemd-xdg-autostart-generator) and compositors look a bare name up in the system
+// PATH, without the user's ~/.local/bin, so a bare `sotto` is only safe when that PATH finds us.
+static QString systemSotto()
+{
+    return QStandardPaths::findExecutable(QStringLiteral("sotto"),
+                                          {QStringLiteral("/usr/local/bin"), QStringLiteral("/usr/bin"), QStringLiteral("/bin")});
+}
+
 QString launchProgram()
 {
     if (const QString image = appImage(); !image.isEmpty())
         return image;
-    if (QStandardPaths::findExecutable(QStringLiteral("sotto")) == QCoreApplication::applicationFilePath())
+    if (systemSotto() == QCoreApplication::applicationFilePath())
         return QStringLiteral("sotto");
     return QCoreApplication::applicationFilePath();
 }
@@ -199,7 +207,8 @@ static bool installedHere(const QString &entryPath)
 
 // An AppImage that was run once and then deleted leaves its menu entry and autostart behind. If its
 // entry took the place of this installation's one, the portals no longer know our app id and the
-// shortcut stops working; an autostart entry would start a file that is gone.
+// shortcut stops working; an autostart entry would start a file that is gone. Sotto up to 2.0.0
+// also wrote a bare `sotto` for ~/.local/bin, which the autostart never finds.
 static void repairIntegration(const QString &entryPath)
 {
     const QByteArray entry = readAll(entryPath);
@@ -212,8 +221,10 @@ static void repairIntegration(const QString &entryPath)
         }
     }
     if (autostart()) {
-        const QString target = execPath(readAll(autostartFile()));
-        if (!target.isEmpty() && !QFileInfo::exists(target))
+        const QByteArray autostartEntry = readAll(autostartFile());
+        const QString target = execPath(autostartEntry);
+        const bool bareNotFound = entryValue(autostartEntry, "Exec") == QLatin1String("sotto") && systemSotto().isEmpty();
+        if ((!target.isEmpty() && !QFileInfo::exists(target)) || bareNotFound)
             setAutostart(true);
     }
 }

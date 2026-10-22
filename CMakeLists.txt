@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(sotto VERSION 2.0.0 DESCRIPTION "Voice typing for Linux: GigaAM, Parakeet and Whisper, live as you speak" LANGUAGES CXX)
+project(sotto VERSION 2.0.1 DESCRIPTION "Voice typing for Linux: GigaAM, Parakeet and Whisper, live as you speak" LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

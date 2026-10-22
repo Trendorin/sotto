@@ -6,7 +6,7 @@
 
 Voice typing for Linux, local and fast.
 
-[![Release](https://img.shields.io/badge/release-v2.0.0-e0475e)](https://github.com/Trendorin/sotto/releases/latest)
+[![Release](https://img.shields.io/badge/release-v2.0.1-e0475e)](https://github.com/Trendorin/sotto/releases/latest)
 [![License](https://img.shields.io/badge/license-MIT-e0475e)](LICENSE)
 ![sherpa-onnx](https://img.shields.io/badge/sherpa--onnx-1.13.8-e0475e)
 ![whisper.cpp](https://img.shields.io/badge/whisper.cpp-1.9.5-e0475e)
@@ -46,16 +46,16 @@ its key, recognises speech on your computer and types the result into the active
 
 | your system | file from the [latest release](https://github.com/Trendorin/sotto/releases/latest) |
 |---|---|
-| Arch Linux, CachyOS, Manjaro | `sotto-2.0.0-1-x86_64.pkg.tar.zst` |
-| Debian 13 and newer | `sotto_2.0.0-1_amd64.deb` |
-| Fedora 44 and newer | `sotto-2.0.0-1.fc44.x86_64.rpm` |
-| any distribution with glibc 2.35+ | `Sotto-2.0.0-x86_64.AppImage` |
+| Arch Linux, CachyOS, Manjaro | `sotto-2.0.1-1-x86_64.pkg.tar.zst` |
+| Debian 13 and newer | `sotto_2.0.1-1_amd64.deb` |
+| Fedora 44 and newer | `sotto-2.0.1-1.fc44.x86_64.rpm` |
+| any distribution with glibc 2.35+ | `Sotto-2.0.1-x86_64.AppImage` |
 
 ```sh
-sudo pacman -U ./sotto-2.0.0-1-x86_64.pkg.tar.zst    # Arch
-sudo apt install ./sotto_2.0.0-1_amd64.deb            # Debian
-sudo dnf install ./sotto-2.0.0-1.fc44.x86_64.rpm      # Fedora
-chmod +x Sotto-2.0.0-x86_64.AppImage && ./Sotto-2.0.0-x86_64.AppImage
+sudo pacman -U ./sotto-2.0.1-1-x86_64.pkg.tar.zst    # Arch
+sudo apt install ./sotto_2.0.1-1_amd64.deb            # Debian
+sudo dnf install ./sotto-2.0.1-1.fc44.x86_64.rpm      # Fedora
+chmod +x Sotto-2.0.1-x86_64.AppImage && ./Sotto-2.0.1-x86_64.AppImage
 ```
 
 Every package is built in a clean container of its distribution, then installed and started

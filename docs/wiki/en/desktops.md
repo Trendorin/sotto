@@ -88,5 +88,5 @@ command_sotto = sotto --toggle
 ## AppImage
 
 Use the path of the AppImage instead of `sotto`, for example
-`spawn "/home/you/Apps/Sotto-2.0.0-x86_64.AppImage" "--toggle"`. The settings and `--keybind`
+`spawn "/home/you/Apps/Sotto-2.0.1-x86_64.AppImage" "--toggle"`. The settings and `--keybind`
 already put it in.
