@@ -73,7 +73,9 @@ packaging/build-whisper.sh %{priv} "$PWD/whisper-root" "$PWD/whisper.cpp-%{whisp
 install -d %{buildroot}%{priv}/ggml
 cp -a whisper-root%{priv}/lib/lib*.so* %{buildroot}%{priv}/
 cp -a whisper-root%{priv}/ggml/*.so %{buildroot}%{priv}/ggml/
-install -m755 sherpa-onnx-v%{sherpa_version}-linux-x64-shared/lib/libsherpa-onnx-c-api.so \
+# Without the execute bit: find-debuginfo and brp-strip skip them. Their strip calls the prebuilt
+# libonnxruntime.so ill-formed and the build stops on its missing build-id; ld.so does not need the bit.
+install -m644 sherpa-onnx-v%{sherpa_version}-linux-x64-shared/lib/libsherpa-onnx-c-api.so \
     sherpa-onnx-v%{sherpa_version}-linux-x64-shared/lib/libonnxruntime.so %{buildroot}%{priv}/
 rm -rf %{buildroot}%{_datadir}/licenses
 
