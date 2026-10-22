@@ -1,6 +1,0 @@
-<RCC>
-    <qresource prefix="/">
-        <file alias="sotto.svg">io.github.trendorin.Sotto.svg</file>
-        <file alias="sotto.desktop">io.github.trendorin.Sotto.desktop</file>
-    </qresource>
-</RCC>

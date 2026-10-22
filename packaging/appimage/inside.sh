@@ -41,7 +41,7 @@ deps() {
     fi
     apt-get update -q
     LD_PRELOAD=$preload apt-get install -yq --no-install-recommends \
-        build-essential gcc-12 g++-12 git curl ca-certificates python3-pip pkg-config patchelf file \
+        build-essential gcc-12 g++-12 git curl bzip2 ca-certificates python3-pip pkg-config patchelf file \
         libgl-dev libegl-dev libxkbcommon-dev libxkbcommon-x11-0 libfontconfig1 libfreetype6 libdbus-1-3 libglib2.0-0 \
         libwayland-dev libwayland-bin wayland-protocols \
         libpulse0 libx11-xcb1 libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 \
@@ -99,6 +99,11 @@ whisper() {
     cmake --install $W/whisper.cpp/build
 }
 
+sherpa() {
+    # Prebuilt for glibc 2.17, so it runs wherever the AppImage does.
+    bash "$SRC/packaging/fetch-sherpa.sh" /opt/sherpa
+}
+
 tools() {
     mkdir -p $W/tools
     # Build tools are checked against a pinned SHA-256 before they run. The plugin-qt release 1-alpha-20250213-1
@@ -122,13 +127,14 @@ step qt qt
 step kde kde
 step vulkan vulkan
 step whisper whisper
+step sherpa sherpa
 step tools tools
 
 echo "==> sotto"
 VERSION=$(sed -n 's/^project(sotto VERSION \([0-9.]*\).*/\1/p' "$SRC/CMakeLists.txt")
 rm -rf $W/sotto-build $W/AppDir
 cmake -S "$SRC" -B $W/sotto-build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr \
-    -DCMAKE_PREFIX_PATH="$QTDIR;/opt/kde;/opt/whisper"
+    -DCMAKE_PREFIX_PATH="$QTDIR;/opt/kde;/opt/whisper" -DSOTTO_SHERPA_DIR=/opt/sherpa -DSOTTO_REQUIRE_SHERPA=ON
 cmake --build $W/sotto-build -j"$JOBS"
 DESTDIR=$W/AppDir cmake --install $W/sotto-build
 
@@ -140,8 +146,10 @@ cp "$(find /opt/kde -name liblayer-shell.so | head -1)" $A/usr/plugins/wayland-s
 
 export APPIMAGE_EXTRACT_AND_RUN=1 NO_STRIP=0
 export QMAKE=$QTDIR/bin/qmake
-export LD_LIBRARY_PATH=$QTDIR/lib:/opt/kde/lib:/opt/whisper/lib
+export LD_LIBRARY_PATH=$QTDIR/lib:/opt/kde/lib:/opt/whisper/lib:/opt/sherpa/lib
 export EXTRA_PLATFORM_PLUGINS="libqwayland-generic.so"
+# The icons are SVG: bring the SVG icon engine and image format plugins.
+export EXTRA_QT_MODULES="svg"
 # Audio goes through PulseAudio/PipeWire inside QtMultimedia; the media playback backends aren't needed.
 export EXCLUDE_LIBRARIES="libgstreamermediaplugin.so"
 

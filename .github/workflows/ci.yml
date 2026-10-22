@@ -15,31 +15,45 @@ concurrency:
 
 jobs:
   build:
-    name: Build
+    name: Build and test
     runs-on: ubuntu-24.04
     container: archlinux:base-devel
     steps:
       - name: Dependencies
         run: |
-          pacman -Syu --noconfirm --needed cmake ninja qt6-base qt6-multimedia qt6-wayland layer-shell-qt \
+          pacman -Syu --noconfirm --needed cmake ninja python qt6-base qt6-multimedia qt6-wayland layer-shell-qt \
             whisper-cpp ggml appstream desktop-file-utils
 
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
+      - name: sherpa-onnx (pinned, checked against its SHA-256)
+        run: packaging/fetch-sherpa.sh "$RUNNER_TEMP/sherpa"
+
       - name: Build (warnings are errors)
         run: |
-          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DSOTTO_WERROR=ON
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DSOTTO_WERROR=ON -DSOTTO_BUILD_TESTS=ON \
+            -DSOTTO_SHERPA_DIR="$RUNNER_TEMP/sherpa" -DSOTTO_REQUIRE_SHERPA=ON
           cmake --build build
+
+      - name: Test (phrase detection, translations)
+        run: ctest --test-dir build --output-on-failure
+
+      - name: Builds without sherpa-onnx too
+        run: |
+          cmake -S . -B build-whisper -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DSOTTO_WERROR=ON
+          cmake --build build-whisper
 
       - name: Runs in English and Russian
         run: |
           QT_QPA_PLATFORM=offscreen SOTTO_LANG=en build/sotto --help | grep -q "Start or stop dictation"
           QT_QPA_PLATFORM=offscreen SOTTO_LANG=ru build/sotto --help | grep -q "Начать или закончить диктовку"
+          QT_QPA_PLATFORM=offscreen build/sotto --models | grep -q gigaam-v3-ru
+          QT_QPA_PLATFORM=offscreen XDG_CURRENT_DESKTOP=niri build/sotto --keybind | grep -q 'spawn "'
 
       - name: Desktop metadata
         run: |
-          desktop-file-validate data/io.github.trendorin.Sotto.desktop
-          appstreamcli validate --no-net data/io.github.trendorin.Sotto.metainfo.xml
+          desktop-file-validate packaging/io.github.trendorin.Sotto.desktop
+          appstreamcli validate --no-net packaging/io.github.trendorin.Sotto.metainfo.xml
 
       - name: Scripts parse
         run: for f in install.sh packaging/*.sh packaging/*/*.sh .github/release-notes.sh; do bash -n "$f"; done

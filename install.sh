@@ -5,14 +5,16 @@
 #   ./install.sh --yes           no questions: defaults plus the flags below
 #   ./install.sh --prefix DIR    install into DIR/bin and DIR/share (default ~/.local)
 #   ./install.sh --own-whisper   build the pinned whisper.cpp even if the system has one
+#   ./install.sh --no-sherpa     Whisper models only: skip sherpa-onnx (GigaAM, Parakeet)
 #   ./install.sh --no-packages   never install missing distribution packages, only name them
 #   ./install.sh --uninstall     remove Sotto (add --purge to delete models and settings too)
 #
 # Builds from this source checkout with CMake. Without a system whisper.cpp it builds
-# the pinned version into PREFIX/lib/sotto (Vulkan when the headers and glslc are there).
-# Prebuilt packages (Arch, Debian, Fedora, AppImage) are on the releases page. Sotto
-# itself goes into your home without sudo; sudo is used only, after asking, to install
-# missing distribution packages (pacman, apt, dnf or zypper).
+# the pinned version into PREFIX/lib/sotto (Vulkan when the headers and glslc are there);
+# the pinned sherpa-onnx release, checked against its SHA-256, goes there too. Prebuilt
+# packages (Arch, Debian, Fedora, AppImage) are on the releases page. Sotto itself goes
+# into your home without sudo; sudo is used only, after asking, to install missing
+# distribution packages (pacman, apt, dnf or zypper).
 
 set -euo pipefail
 
@@ -20,19 +22,21 @@ set -euo pipefail
 
 PREFIX="$HOME/.local"
 OWN_WHISPER=0
+SHERPA=1
 ASSUME_YES=0
 ACTION=install
 PURGE=0
 
 PACKAGES=1
 
-usage() { sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'; }
+usage() { sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//'; }
 
 while [ $# -gt 0 ]; do
     case "$1" in
         --prefix) PREFIX="${2:?--prefix needs a directory}"; shift 2 ;;
         --prefix=*) PREFIX="${1#--prefix=}"; shift ;;
         --own-whisper) OWN_WHISPER=1; shift ;;
+        --no-sherpa) SHERPA=0; shift ;;
         --no-packages) PACKAGES=0; shift ;;
         -y | --yes) ASSUME_YES=1; shift ;;
         --uninstall) ACTION=uninstall; shift ;;
@@ -45,7 +49,7 @@ done
 INTERACTIVE=0
 if [ "$ASSUME_YES" = 0 ] && [ -t 0 ] && [ -t 1 ]; then INTERACTIVE=1; fi
 
-NAME=Sotto SLUG=sotto TAGLINE="voice typing · whisper.cpp · Linux"
+NAME=Sotto SLUG=sotto TAGLINE="voice typing · GigaAM · Whisper · Linux"
 ACCENT_RGB="224;71;94" ACCENT_256=168
 
 # ---- look ---------------------------------------------------------------------------
@@ -254,7 +258,7 @@ progress() { cmake_progress "$1"; }
 # ---- where things are -----------------------------------------------------------
 
 SRC_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-[ -f "$SRC_DIR/CMakeLists.txt" ] && [ -f "$SRC_DIR/src/app.cpp" ] || die "run install.sh from the Sotto source folder"
+[ -f "$SRC_DIR/CMakeLists.txt" ] && [ -f "$SRC_DIR/src/gui/app.cpp" ] || die "run install.sh from the Sotto source folder"
 VERSION="$(sed -n 's/^project(sotto VERSION \([0-9.]*\).*/\1/p' "$SRC_DIR/CMakeLists.txt")"
 BUILD_DIR="$SRC_DIR/build"
 APP_ID=io.github.trendorin.Sotto
@@ -379,19 +383,20 @@ uninstall() {
 
 # Everything Sotto needs to build, per distribution (arch, debian, fedora, suse). On Arch the
 # system whisper.cpp is used; elsewhere the pinned one is built, which needs git, ninja and,
-# for the GPU, the Vulkan headers and glslc.
+# for the GPU, the Vulkan headers and glslc. curl and bzip2 fetch and unpack sherpa-onnx.
 BUILD_PKGS=(
-    "base-devel cmake ninja qt6-base qt6-multimedia whisper-cpp ggml-vulkan"
-    "build-essential pkg-config cmake ninja-build git ca-certificates qt6-base-dev qt6-multimedia-dev"
-    "gcc-c++ pkgconf-pkg-config cmake ninja-build git qt6-qtbase-devel qt6-qtmultimedia-devel"
-    "gcc-c++ pkgconf-pkg-config cmake ninja git ca-certificates-mozilla qt6-base-devel qt6-multimedia-devel"
+    "base-devel cmake ninja curl bzip2 qt6-base qt6-multimedia whisper-cpp ggml-vulkan"
+    "build-essential pkg-config cmake ninja-build git curl bzip2 ca-certificates qt6-base-dev qt6-multimedia-dev"
+    "gcc-c++ pkgconf-pkg-config cmake ninja-build git curl bzip2 qt6-qtbase-devel qt6-qtmultimedia-devel"
+    "gcc-c++ pkgconf-pkg-config cmake ninja git curl bzip2 ca-certificates-mozilla qt6-base-devel qt6-multimedia-devel"
 )
-# What makes it work well: the Wayland indicator, the GPU, direct pasting, X11 on GNOME.
+# What makes it work well: the Wayland indicator, the GPU, direct pasting (wtype on compositors
+# without the RemoteDesktop portal: Hyprland, niri, sway, ...), X11 on GNOME.
 EXTRA_PKGS=(
-    "qt6-wayland layer-shell-qt wl-clipboard vulkan-headers shaderc"
-    "qt6-wayland-dev qt6-qpa-plugins liblayershellqtinterface-dev libvulkan-dev glslc spirv-headers wl-clipboard"
-    "qt6-qtwayland-devel layer-shell-qt-devel vulkan-loader-devel glslc spirv-headers-devel wl-clipboard"
-    "qt6-wayland-devel layer-shell-qt6-devel vulkan-devel vulkan-headers shaderc spirv-headers wl-clipboard"
+    "qt6-wayland qt6-svg layer-shell-qt wl-clipboard wtype vulkan-headers shaderc"
+    "qt6-wayland-dev qt6-qpa-plugins qt6-svg-plugins liblayershellqtinterface-dev libvulkan-dev glslc spirv-headers wl-clipboard wtype"
+    "qt6-qtwayland-devel qt6-qtsvg layer-shell-qt-devel vulkan-loader-devel glslc spirv-headers-devel wl-clipboard wtype"
+    "qt6-wayland-devel layer-shell-qt6-devel vulkan-devel vulkan-headers shaderc spirv-headers wl-clipboard wtype"
 )
 
 QMAKE=""
@@ -406,7 +411,8 @@ build_tools_present() {
         if command -v "$cand" >/dev/null 2>&1 && "$cand" -query QT_VERSION 2>/dev/null | grep -q '^6\.'; then QMAKE="$cand"; break; fi
     done
     if [ "$OWN_WHISPER" = 0 ] && pkg-config --exists whisper 2>/dev/null; then SYSTEM_WHISPER=1; fi
-    command -v cmake >/dev/null 2>&1 &&
+    { [ "$SHERPA" = 0 ] || { command -v curl >/dev/null 2>&1 && command -v bzip2 >/dev/null 2>&1; }; } &&
+        command -v cmake >/dev/null 2>&1 &&
         { command -v c++ >/dev/null 2>&1 || command -v g++ >/dev/null 2>&1 || command -v clang++ >/dev/null 2>&1; } &&
         [ -n "$QMAKE" ] && [ -d "$("$QMAKE" -query QT_INSTALL_LIBS)/cmake/Qt6Multimedia" ] &&
         { [ "$SYSTEM_WHISPER" = 1 ] || { command -v git >/dev/null 2>&1 && command -v ninja >/dev/null 2>&1; }; }
@@ -414,6 +420,12 @@ build_tools_present() {
 
 vulkan_present() { command -v glslc >/dev/null 2>&1 && [ -e /usr/include/vulkan/vulkan.h ]; }
 layer_shell_present() { [ -d "$("$QMAKE" -query QT_INSTALL_LIBS)/cmake/LayerShellQt" ]; }
+# The tray and window icons are SVG.
+svg_present() { [ -e "$("$QMAKE" -query QT_INSTALL_PLUGINS)/iconengines/libqsvgicon.so" ]; }
+# Compositors that bind keys and paste without desktop portals: wtype presses the paste keys there.
+wlroots_like() {
+    case "${XDG_CURRENT_DESKTOP:-}" in *Hyprland* | *niri* | *sway* | *river* | *wayfire* | *labwc*) return 0 ;; *) return 1 ;; esac
+}
 # On GNOME Sotto runs through XWayland so that its indicator never takes the focus.
 xcb_needed_missing() {
     case "${XDG_CURRENT_DESKTOP:-}" in *GNOME*) [ ! -e "$("$QMAKE" -query QT_INSTALL_PLUGINS)/platforms/libqxcb.so" ] ;; *) return 1 ;; esac
@@ -422,8 +434,10 @@ xcb_needed_missing() {
 missing_extras() {
     local absent=()
     layer_shell_present || absent+=(layer-shell-qt)
+    svg_present || absent+=("Qt's SVG plugin")
     [ "$SYSTEM_WHISPER" = 1 ] || vulkan_present || absent+=("Vulkan headers and glslc")
     command -v wl-copy >/dev/null 2>&1 || absent+=(wl-clipboard)
+    wlroots_like && ! command -v wtype >/dev/null 2>&1 && absent+=(wtype)
     xcb_needed_missing && absent+=("Qt's X11 plugin")
     local IFS=,
     printf '%s' "${absent[*]}"
@@ -433,6 +447,7 @@ check_system() {
     step "Checking your system"
     [ "$(uname -s)" = Linux ] || die "Sotto runs on Linux only"
     ok "Linux $(uname -m) · $(. /etc/os-release 2>/dev/null && printf '%s' "${PRETTY_NAME:-unknown distribution}")"
+    case "$(uname -m)" in x86_64 | aarch64) ;; *) SHERPA=0 ;; esac
     if ! build_tools_present; then
         get_packages "CMake, a C++ compiler and Qt 6 with Multimedia are needed to build Sotto" "${BUILD_PKGS[@]}" || true
         build_tools_present || die "the build tools are still missing — install them, then run ./install.sh again"
@@ -458,9 +473,15 @@ check_system() {
         ok "whisper.cpp will be built for Sotto, CPU only"
         info "for the GPU install the Vulkan headers and glslc, then run this again"
     fi
+    if [ "$SHERPA" = 1 ]; then
+        ok "sherpa-onnx will be fetched for GigaAM and Parakeet"
+    else
+        warn "without sherpa-onnx — Whisper models only"
+    fi
     layer_shell_present || warn "layer-shell-qt not found — the indicator becomes a normal window on Wayland"
     xcb_needed_missing && warn "Qt's X11 plugin not found (qt6-qpa-plugins on Debian/Ubuntu) — on GNOME the indicator would take the focus"
     command -v wl-copy >/dev/null 2>&1 || warn "wl-clipboard not found — pasting falls back to the Qt clipboard"
+    wlroots_like && ! command -v wtype >/dev/null 2>&1 && warn "wtype not found — on ${XDG_CURRENT_DESKTOP} the text stays in the clipboard"
     return 0
 }
 
@@ -474,8 +495,14 @@ build() {
     if [ "$SYSTEM_WHISPER" = 0 ]; then
         info "whisper.cpp takes a few minutes the first time"
         spin "whisper.cpp" env WHISPER_VULKAN="$VULKAN" "$SRC_DIR/packaging/build-whisper.sh" "$PRIV" "$BUILD_DIR/whisper"
-        args+=(-DCMAKE_PREFIX_PATH="$BUILD_DIR/whisper$PRIV" -DCMAKE_INSTALL_RPATH="$PRIV" -DSOTTO_GGML_BACKEND_DIR="$PRIV/ggml")
+        args+=(-DCMAKE_PREFIX_PATH="$BUILD_DIR/whisper$PRIV" -DSOTTO_GGML_BACKEND_DIR="$PRIV/ggml")
     fi
+    if [ "$SHERPA" = 1 ]; then
+        spin "sherpa-onnx" "$SRC_DIR/packaging/fetch-sherpa.sh" "$BUILD_DIR/sherpa"
+        args+=(-DSOTTO_SHERPA_DIR="$BUILD_DIR/sherpa" -DSOTTO_REQUIRE_SHERPA=ON)
+    fi
+    # The private whisper.cpp and sherpa-onnx are found through the run path.
+    { [ "$SYSTEM_WHISPER" = 0 ] || [ "$SHERPA" = 1 ]; } && args+=(-DCMAKE_INSTALL_RPATH="$PRIV")
     [ -f "$BUILD_DIR/sotto/CMakeCache.txt" ] && ! grep -q "^CMAKE_INSTALL_PREFIX:PATH=$PREFIX\$" "$BUILD_DIR/sotto/CMakeCache.txt" &&
         rm -rf "$BUILD_DIR/sotto"
     local gen=()
@@ -498,6 +525,12 @@ install_files() {
         for f in "$BUILD_DIR/whisper$PRIV"/lib/lib*.so*; do cp -a "$f" "$PRIV/"; files+=("$PRIV/$(basename "$f")"); done
         for f in "$BUILD_DIR/whisper$PRIV"/ggml/*.so; do cp -a "$f" "$PRIV/ggml/"; files+=("$PRIV/ggml/$(basename "$f")"); done
         ok "whisper.cpp → $(tilde "$PRIV")"
+    fi
+    if [ "$SHERPA" = 1 ]; then
+        local f
+        mkdir -p "$PRIV"
+        for f in "$BUILD_DIR/sherpa"/lib/*.so; do cp -a "$f" "$PRIV/"; files+=("$PRIV/$(basename "$f")"); done
+        ok "sherpa-onnx → $(tilde "$PRIV")"
     fi
     local desktop="$PREFIX/share/applications/$APP_ID.desktop"
     [ -f "$desktop" ] && { desktop_entry "$desktop" "$desktop.new" "$BIN_DIR/sotto" && mv -f "$desktop.new" "$desktop"; }

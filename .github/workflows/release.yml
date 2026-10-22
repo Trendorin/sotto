@@ -17,6 +17,7 @@ concurrency:
 
 env:
   WHISPER_VERSION: "1.9.5"
+  SHERPA_VERSION: "1.13.8"
 
 jobs:
   source:
@@ -38,7 +39,7 @@ jobs:
           grep -qx "pkgver=$version" packaging/arch/PKGBUILD
           grep -Eq "^Version: +$version$" packaging/rpm/sotto.spec
           grep -q "^## \[$version\]" CHANGELOG.md
-          grep -q "release version=\"$version\"" data/io.github.trendorin.Sotto.metainfo.xml
+          grep -q "release version=\"$version\"" packaging/io.github.trendorin.Sotto.metainfo.xml
 
       - name: Archive
         run: |
@@ -59,7 +60,7 @@ jobs:
     steps:
       - name: Build dependencies
         run: |
-          pacman -Syu --noconfirm --needed cmake ninja qt6-base qt6-multimedia qt6-wayland layer-shell-qt \
+          pacman -Syu --noconfirm --needed cmake ninja python qt6-base qt6-multimedia qt6-wayland layer-shell-qt \
             whisper-cpp ggml ggml-vulkan wl-clipboard xdg-desktop-portal polkit hicolor-icon-theme
 
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -78,6 +79,7 @@ jobs:
           pacman -U --noconfirm dist/*.pkg.tar.zst
           pacman -Qkk sotto
           QT_QPA_PLATFORM=offscreen sotto --version
+          QT_QPA_PLATFORM=offscreen sotto --models | grep -q gigaam-v3-ru
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
@@ -93,8 +95,9 @@ jobs:
       - name: Build dependencies
         run: |
           apt-get update
-          apt-get install -y --no-install-recommends build-essential cmake ninja-build dpkg-dev git ca-certificates \
-            qt6-base-dev qt6-multimedia-dev qt6-wayland-dev liblayershellqtinterface-dev libvulkan-dev glslc spirv-headers
+          apt-get install -y --no-install-recommends build-essential cmake ninja-build dpkg-dev git curl bzip2 ca-certificates \
+            python3 qt6-base-dev qt6-qpa-plugins qt6-multimedia-dev qt6-wayland-dev liblayershellqtinterface-dev libvulkan-dev \
+            glslc spirv-headers
 
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
@@ -106,6 +109,7 @@ jobs:
           apt-get install -y ./dist/sotto_*.deb
           dpkg -s sotto | grep -E '^(Version|Depends):'
           QT_QPA_PLATFORM=offscreen sotto --version
+          QT_QPA_PLATFORM=offscreen sotto --models | grep -q gigaam-v3-ru
           ls /usr/lib/sotto /usr/lib/sotto/ggml
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -121,7 +125,7 @@ jobs:
     steps:
       - name: Build dependencies
         run: |
-          dnf install -y --setopt=install_weak_deps=False rpm-build cmake ninja-build gcc-c++ \
+          dnf install -y --setopt=install_weak_deps=False rpm-build cmake ninja-build gcc-c++ python3 bzip2 \
             qt6-qtbase-devel qt6-qtmultimedia-devel qt6-qtwayland-devel layer-shell-qt-devel \
             vulkan-loader-devel glslc spirv-headers-devel
 
@@ -138,6 +142,9 @@ jobs:
           cp dist/sotto-*.tar.gz ~/rpmbuild/SOURCES/
           curl -fsSL --retry 3 -o ~/rpmbuild/SOURCES/whisper.cpp-$WHISPER_VERSION.tar.gz \
             "https://github.com/ggml-org/whisper.cpp/archive/v$WHISPER_VERSION/whisper.cpp-$WHISPER_VERSION.tar.gz"
+          curl -fsSL --retry 3 -o ~/rpmbuild/SOURCES/sherpa-onnx-v$SHERPA_VERSION-linux-x64-shared.tar.bz2 \
+            "https://github.com/k2-fsa/sherpa-onnx/releases/download/v$SHERPA_VERSION/sherpa-onnx-v$SHERPA_VERSION-linux-x64-shared.tar.bz2"
+          echo "c0bdb7907d3a74bba1d55d22bf4d9fa75586cf1530614ebe88a27b9118e015c4  $HOME/rpmbuild/SOURCES/sherpa-onnx-v$SHERPA_VERSION-linux-x64-shared.tar.bz2" | sha256sum -c
           rpmbuild -bb packaging/rpm/sotto.spec
           rm dist/*
           cp ~/rpmbuild/RPMS/x86_64/sotto-[0-9]*.rpm dist/
@@ -147,6 +154,7 @@ jobs:
           dnf install -y ./dist/sotto-*.rpm
           rpm -V sotto
           QT_QPA_PLATFORM=offscreen sotto --version
+          QT_QPA_PLATFORM=offscreen sotto --models | grep -q gigaam-v3-ru
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
@@ -169,10 +177,14 @@ jobs:
           sudo apt-get install -yq xvfb
           img=$(ls dist/*.AppImage)
           xvfb-run -a "$img" --appimage-extract-and-run --version
+          xvfb-run -a "$img" --appimage-extract-and-run --models | grep -q gigaam-v3-ru
           "$img" --appimage-extract >/dev/null
+          test -f squashfs-root/usr/lib/libsherpa-onnx-c-api.so
+          test -f squashfs-root/usr/lib/libonnxruntime.so
           test -f squashfs-root/usr/plugins/wayland-shell-integration/libxdg-shell.so
           test -f squashfs-root/usr/plugins/platforms/libqwayland-generic.so
           test -f squashfs-root/usr/plugins/platforms/libqxcb.so
+          test -f squashfs-root/usr/plugins/iconengines/libqsvgicon.so
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:

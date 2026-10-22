@@ -17,21 +17,21 @@ body:
     id: version
     attributes:
       label: Sotto version and how you installed it
-      placeholder: e.g. 1.2.5, Fedora package / AppImage
+      placeholder: e.g. 2.0.0, Fedora package / AppImage
     validations:
       required: true
   - type: input
     id: system
     attributes:
       label: Distribution, desktop and session
-      placeholder: e.g. Arch Linux, KDE Plasma 6, Wayland
+      placeholder: e.g. Arch Linux, KDE Plasma 6 / niri / Hyprland, Wayland
     validations:
       required: true
   - type: input
     id: model
     attributes:
       label: Model and GPU
-      placeholder: e.g. Large v3 Turbo, Radeon RX 7800 (Vulkan)
+      placeholder: e.g. GigaAM v3 / Whisper Large v3 Turbo, Radeon RX 7800 (Vulkan)
   - type: textarea
     id: log
     attributes:

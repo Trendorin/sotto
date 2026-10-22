@@ -24,14 +24,14 @@ build(
         "ru": "Голосовой ввод для Linux, локально и быстро",
     },
     flows={
-        "en": Flow([[Node("Hotkey", "portal")], [Node("Record", "16 kHz, in RAM")], [Node("Silence cut", "Silero VAD")],
-                    [Node("Recognise", "whisper.cpp", accent=True)], [Node("Paste", "portal, Ctrl+V")]]),
-        "ru": Flow([[Node("Клавиша", "портал")], [Node("Запись", "16 кГц, в ОЗУ")], [Node("Тишина", "Silero VAD")],
-                    [Node("Распознавание", "whisper.cpp", accent=True)], [Node("Вставка", "портал, Ctrl+V")]]),
+        "en": Flow([[Node("Hotkey", "portal or compositor")], [Node("Record", "16 kHz, in RAM")], [Node("Phrases", "Silero VAD, at pauses")],
+                    [Node("Recognise", "GigaAM or Whisper", accent=True)], [Node("Type", "while you speak")]]),
+        "ru": Flow([[Node("Клавиша", "портал или композитор")], [Node("Запись", "16 кГц, в ОЗУ")], [Node("Фразы", "Silero VAD, по паузам")],
+                    [Node("Распознавание", "GigaAM или Whisper", accent=True)], [Node("Ввод", "пока вы говорите")]]),
     },
     flow_alt={
-        "en": "Hotkey, recording in memory, silence removed by Silero VAD, whisper.cpp recognises, the text is pasted",
-        "ru": "Клавиша, запись в памяти, Silero VAD убирает тишину, whisper.cpp распознаёт, текст вставляется",
+        "en": "Hotkey, recording in memory, Silero VAD cuts phrases at the pauses, GigaAM, Parakeet or Whisper recognises each one, the text is typed while you speak",
+        "ru": "Клавиша, запись в памяти, Silero VAD режет речь на фразы по паузам, GigaAM, Parakeet или Whisper распознаёт каждую, текст печатается, пока вы говорите",
     },
-    app_icons=["data/io.github.trendorin.Sotto.svg"],
+    app_icons=["packaging/io.github.trendorin.Sotto.svg"],
 )

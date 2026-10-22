@@ -5,6 +5,64 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [2.0.0] — 2026-10-22
+
+### Added
+- **New recognition engine: sherpa-onnx**, next to whisper.cpp, with two models that are more
+  accurate than Whisper and fast on an ordinary processor:
+  - **GigaAM v3** (Sber, MIT): the most accurate open model for Russian, with punctuation and
+    capital letters. 221 MB; an 11-second phrase takes about a tenth of its length to recognise
+    on two CPU cores.
+  - **Parakeet TDT v3** (NVIDIA, CC-BY-4.0): 25 European languages including Russian, Ukrainian
+    and English, finds the language itself, punctuation and capitals. 639 MB.
+  Both are downloaded file by file from Hugging Face, the mirror or your own server and kept only
+  if every file matches its published size and SHA-256, like the Whisper models. Whisper stays
+  for its 99 languages and the GPU.
+- **Live typing**: the recording is cut into phrases at your pauses (Silero VAD), each phrase is
+  recognised while you go on talking and typed as soon as it is ready, so the text appears while
+  you speak instead of after the recording. **Pause that ends a phrase** sets how long a pause is
+  (600 ms by default). Turning **Type each phrase as soon as I pause** off pastes everything at
+  the end, still recognised phrase by phrase, so even then only the last phrase is left to wait for.
+- **Tiling compositors** (niri, Hyprland, sway, river, Wayfire, labwc) and **COSMIC**:
+  - where no portal gives Sotto a key, the settings and `sotto --keybind` show the exact lines for
+    the compositor's config (`config.kdl`, `hyprland.conf`, ...), with the path to Sotto filled in
+    and a hold-to-talk variant;
+  - `sotto --toggle` bound in the compositor hands the command to the running Sotto in about a
+    millisecond, before Qt even starts;
+  - pasting works without the RemoteDesktop portal: through `wtype` (Hyprland, niri, sway, ...),
+    `ydotool` (any desktop) or `xdotool` (X11), chosen automatically or in **Press keys with**,
+    falling back from one to the next;
+  - without a tray, messages go to the notification daemon.
+- `sotto --transcribe file.wav [--model ID]` prints the text of a recording (the same phrase
+  pipeline as a dictation), `sotto --models` lists the models.
+- Tests: phrase detection and a check that every interface string has its Russian translation
+  (`ctest`, in CI and in the Arch, Debian and Fedora package builds).
+
+### Changed
+- The silence filter is no longer an option: Silero VAD now finds the phrases, and recognition
+  only ever sees speech. Without the VAD model (an old install that has not fetched it yet) Sotto
+  falls back to loudness.
+- The source tree follows the other Trendorin projects: `src/core` (audio, engines, models),
+  `src/system` (portals, pasting, desktop detection), `src/gui`; desktop files in `packaging/`,
+  resources in `resources/`, tests in `tests/`, `.editorconfig`.
+- Packages need the Qt SVG plugin (the icons are SVG): `qt6-svg`, `qt6-svg-plugins`, `qt6-qtsvg`.
+- Recognition runs at a lower priority (and its compute threads with it) and leaves a core free, so
+  the microphone and the desktop stay responsive while a phrase is recognised; the model is loaded
+  when Sotto starts, not during the first dictation.
+- Phrases after a pause inside a sentence no longer start with a capital letter; after a full stop
+  they always do.
+- A phrase that cannot be recognised stops the dictation with the reason instead of failing on
+  every following phrase.
+- The interface strings around the old single-pass recognition are gone: the transcription
+  percentage, the silence filter switch, `ModelDownloader::current()` and `Recorder::isActive()`
+  (unused).
+
+### Fixed
+- Silero VAD gave different results for the same recording: a new VAD context does not start
+  from a zero state in whisper.cpp; Sotto now resets it.
+- Without ggml's CPU backend (a broken whisper.cpp install) Sotto stopped with an assertion; now
+  Whisper reports it and phrases fall back to loudness detection.
+
 ## [1.2.5] — 2026-10-21
 
 ### Added
@@ -131,7 +189,8 @@ First public release. Compared with the private 0.x builds:
   any other AppImage inherit it, so a packaged Sotto could point its menu entry at, or remove,
   someone else's AppImage. Sotto now checks that it really runs from inside that AppImage.
 
-[Unreleased]: https://github.com/Trendorin/sotto/compare/v1.2.5...HEAD
+[Unreleased]: https://github.com/Trendorin/sotto/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/Trendorin/sotto/releases/tag/v2.0.0
 [1.2.5]: https://github.com/Trendorin/sotto/releases/tag/v1.2.5
 [1.2.4]: https://github.com/Trendorin/sotto/releases/tag/v1.2.4
 [1.2.3]: https://github.com/Trendorin/sotto/releases/tag/v1.2.3

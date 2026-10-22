@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.trendorin.Sotto</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <name>Sotto</name>
+  <summary>Voice typing for Linux: the text appears while you speak</summary>
+  <summary xml:lang="ru">Голосовой ввод для Linux: текст появляется, пока вы говорите</summary>
+  <description>
+    <p>
+      Press a key and speak: Sotto recognises your speech on your computer and types
+      each phrase where the cursor is as soon as you pause. Nothing leaves your
+      computer; the only network access is the one-time model download, which is
+      checked against the published SHA-256 sums.
+    </p>
+    <p>
+      GigaAM v3, the most accurate open model for Russian, and Parakeet TDT v3, for 25
+      European languages, run fast on an ordinary processor; Whisper covers 99 languages
+      and uses the GPU through Vulkan. Silero VAD cuts the speech into phrases at the
+      pauses.
+    </p>
+    <p>
+      Sotto is a native Qt 6 application that follows your system theme. On Wayland the
+      indicator floats above windows without taking focus. On KDE, GNOME and COSMIC the
+      shortcut and pasting go through the desktop portals; on niri, Hyprland, sway and
+      other compositors Sotto shows the key binding to add and pastes with wtype.
+    </p>
+  </description>
+  <launchable type="desktop-id">io.github.trendorin.Sotto.desktop</launchable>
+  <url type="homepage">https://github.com/Trendorin/sotto</url>
+  <url type="bugtracker">https://github.com/Trendorin/sotto/issues</url>
+  <developer id="io.github.trendorin">
+    <name>Trendorin</name>
+  </developer>
+  <categories>
+    <category>Utility</category>
+    <category>Accessibility</category>
+  </categories>
+  <provides>
+    <binary>sotto</binary>
+  </provides>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="2.0.0" date="2026-10-22"/>
+    <release version="1.2.5" date="2026-10-21"/>
+    <release version="1.2.4" date="2026-10-21"/>
+    <release version="1.2.3" date="2026-10-21"/>
+    <release version="1.2.2" date="2026-10-21"/>
+    <release version="1.2.1" date="2026-10-20"/>
+    <release version="1.2.0" date="2026-10-20"/>
+    <release version="1.1.0" date="2026-10-20"/>
+    <release version="1.0.0" date="2026-10-20"/>
+  </releases>
+</component>

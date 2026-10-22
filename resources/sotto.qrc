@@ -1,0 +1,6 @@
+<!DOCTYPE RCC><RCC version="1.0">
+<qresource prefix="/">
+    <file alias="sotto.svg">../packaging/io.github.trendorin.Sotto.svg</file>
+    <file alias="sotto.desktop">../packaging/io.github.trendorin.Sotto.desktop</file>
+</qresource>
+</RCC>

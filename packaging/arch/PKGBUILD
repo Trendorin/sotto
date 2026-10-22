@@ -2,25 +2,43 @@
 #
 # Builds the source tree this file lives in:  cd packaging/arch && makepkg -si
 pkgname=sotto
-pkgver=1.2.5
+pkgver=2.0.0
 pkgrel=1
-pkgdesc='Voice typing for Linux: press a key, speak, the text appears where the cursor is (whisper.cpp, Qt 6)'
+pkgdesc='Voice typing for Linux: the text appears where the cursor is while you speak (GigaAM, Parakeet, Whisper; Qt 6)'
 arch=('x86_64')
 url='https://github.com/Trendorin/sotto'
 license=('MIT')
-depends=('qt6-base' 'qt6-multimedia' 'qt6-wayland' 'layer-shell-qt' 'whisper-cpp' 'ggml' 'ggml-vulkan'
+depends=('qt6-base' 'qt6-multimedia' 'qt6-svg' 'qt6-wayland' 'layer-shell-qt' 'whisper-cpp' 'ggml' 'ggml-vulkan'
          'wl-clipboard' 'xdg-desktop-portal' 'polkit' 'gcc-libs' 'glibc' 'hicolor-icon-theme')
-makedepends=('cmake' 'ninja')
-optdepends=('ggml-cuda: CUDA acceleration on recent NVIDIA cards')
+makedepends=('cmake' 'ninja' 'python')
+optdepends=('ggml-cuda: CUDA acceleration of Whisper on recent NVIDIA cards'
+            'wtype: pasting on Hyprland, niri, sway and other compositors without the RemoteDesktop portal'
+            'ydotool: pasting on any compositor (needs the ydotoold service)')
 options=('!debug')
+# sherpa-onnx runs GigaAM and Parakeet; Arch has no package of it, so the pinned release is kept
+# privately in /usr/lib/sotto together with the ONNX Runtime it was built for.
+_sherpa=1.13.8
+source=("https://github.com/k2-fsa/sherpa-onnx/releases/download/v$_sherpa/sherpa-onnx-v$_sherpa-linux-x64-shared.tar.bz2")
+sha256sums=('c0bdb7907d3a74bba1d55d22bf4d9fa75586cf1530614ebe88a27b9118e015c4')
 
 build() {
   cmake -B build -S "$startdir/../.." -G Ninja \
     -DCMAKE_BUILD_TYPE=None \
-    -DCMAKE_INSTALL_PREFIX=/usr
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCMAKE_INSTALL_RPATH=/usr/lib/sotto \
+    -DSOTTO_SHERPA_DIR="$srcdir/sherpa-onnx-v$_sherpa-linux-x64-shared" \
+    -DSOTTO_REQUIRE_SHERPA=ON \
+    -DSOTTO_BUILD_TESTS=ON
   cmake --build build
+}
+
+check() {
+  ctest --test-dir build --output-on-failure
 }
 
 package() {
   DESTDIR="$pkgdir" cmake --install build
+  install -Dm755 -t "$pkgdir/usr/lib/sotto" \
+    "$srcdir/sherpa-onnx-v$_sherpa-linux-x64-shared/lib/libsherpa-onnx-c-api.so" \
+    "$srcdir/sherpa-onnx-v$_sherpa-linux-x64-shared/lib/libonnxruntime.so"
 }

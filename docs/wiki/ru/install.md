@@ -12,8 +12,9 @@ sudo dnf install ./sotto-*.x86_64.rpm            # Fedora
 ```
 
 Пакет для Arch использует `whisper-cpp` и `ggml-vulkan` из дистрибутива. Пакеты Debian и Fedora
-несут свой whisper.cpp 1.9.5 с Vulkan в `/usr/lib/sotto`. В AppImage есть Qt и whisper.cpp; для
-видеокарты нужен системный загрузчик Vulkan. При первом запуске AppImage добавляет себя в меню:
+несут свой whisper.cpp 1.9.5 с Vulkan в `/usr/lib/sotto`. Все они несут sherpa-onnx 1.13.8 с его
+ONNX Runtime в `/usr/lib/sotto` для GigaAM и Parakeet (в дистрибутивах его нет). В AppImage есть
+Qt, whisper.cpp и sherpa-onnx; для видеокарты нужен системный загрузчик Vulkan. При первом запуске AppImage добавляет себя в меню:
 порталы выдают горячую клавишу только знакомым приложениям.
 
 Проверить загрузку по `SHA256SUMS` из релиза:
@@ -30,16 +31,17 @@ Qt 6.5 или новее (Debian 13, Ubuntu 24.10, Fedora 39 и новее); н�
 
 | дистрибутив | пакеты, которые установщик предложит поставить |
 |---|---|
-| Arch | `base-devel cmake ninja qt6-base qt6-multimedia whisper-cpp ggml-vulkan qt6-wayland layer-shell-qt wl-clipboard vulkan-headers shaderc` |
-| Debian, Ubuntu | `build-essential pkg-config cmake ninja-build git ca-certificates qt6-base-dev qt6-multimedia-dev qt6-wayland-dev qt6-qpa-plugins liblayershellqtinterface-dev libvulkan-dev glslc spirv-headers wl-clipboard` |
-| Fedora | `gcc-c++ pkgconf-pkg-config cmake ninja-build git qt6-qtbase-devel qt6-qtmultimedia-devel qt6-qtwayland-devel layer-shell-qt-devel vulkan-loader-devel glslc spirv-headers-devel wl-clipboard` |
-| openSUSE | `gcc-c++ pkgconf-pkg-config cmake ninja git ca-certificates-mozilla qt6-base-devel qt6-multimedia-devel qt6-wayland-devel layer-shell-qt6-devel vulkan-devel vulkan-headers shaderc spirv-headers wl-clipboard` |
+| Arch | `base-devel cmake ninja curl bzip2 qt6-base qt6-multimedia whisper-cpp ggml-vulkan qt6-wayland qt6-svg layer-shell-qt wl-clipboard wtype vulkan-headers shaderc` |
+| Debian, Ubuntu | `build-essential pkg-config cmake ninja-build git curl bzip2 ca-certificates qt6-base-dev qt6-multimedia-dev qt6-wayland-dev qt6-qpa-plugins qt6-svg-plugins liblayershellqtinterface-dev libvulkan-dev glslc spirv-headers wl-clipboard wtype` |
+| Fedora | `gcc-c++ pkgconf-pkg-config cmake ninja-build git curl bzip2 qt6-qtbase-devel qt6-qtmultimedia-devel qt6-qtwayland-devel qt6-qtsvg layer-shell-qt-devel vulkan-loader-devel glslc spirv-headers-devel wl-clipboard wtype` |
+| openSUSE | `gcc-c++ pkgconf-pkg-config cmake ninja git curl bzip2 ca-certificates-mozilla qt6-base-devel qt6-multimedia-devel qt6-wayland-devel layer-shell-qt6-devel vulkan-devel vulkan-headers shaderc spirv-headers wl-clipboard wtype` |
 
 ```sh
 ./install.sh                  # спросит, куда ставить
 ./install.sh --yes            # без вопросов, по умолчанию
 ./install.sh --prefix /opt/sotto
 ./install.sh --own-whisper    # собрать закреплённый whisper.cpp, даже если он есть в системе
+./install.sh --no-sherpa      # только модели Whisper, без sherpa-onnx (GigaAM, Parakeet)
 ./install.sh --no-packages    # ничего не ставить, только назвать, чего не хватает
 ```
 
@@ -47,10 +49,16 @@ Qt 6.5 или новее (Debian 13, Ubuntu 24.10, Fedora 39 и новее); н�
 только для Sotto. В первый раз это занимает несколько минут; с заголовками Vulkan и `glslc`
 в сборку войдёт поддержка видеокарты, иначе — только процессор.
 
+sherpa-onnx берётся со [страницы релиза](https://github.com/k2-fsa/sherpa-onnx/releases/tag/v1.13.8)
+в том виде, как его собрали авторы (`packaging/fetch-sherpa.sh`, x86_64 и aarch64), сверяется с
+SHA-256, записанной в этом скрипте, и тоже ложится в `<prefix>/lib/sotto`. Пакеты и AppImage
+используют тот же скрипт или тот же файл с той же суммой.
+
 Если чего-то не хватает, установщик назовёт это и предложит поставить (ответ по умолчанию — да,
 в том числе с `--yes`). Без терминала и без `sudo` без пароля он вместо этого покажет команду.
 Инструменты сборки обязательны; без остального Sotto работает, но индикатор на Wayland будет
-обычным окном, whisper.cpp — считать на процессоре, а вставка пойдёт через буфер обмена Qt.
+обычным окном, whisper.cpp — считать на процессоре, вставка пойдёт через буфер обмена Qt, а в
+тайлинговых композиторах без `wtype` текст останется в буфере обмена.
 
 Запущенный Sotto после обновления перезапускается.
 
