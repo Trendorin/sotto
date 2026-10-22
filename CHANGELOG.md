@@ -5,14 +5,6 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-### Changed
-- Settings: with GigaAM or Parakeet the Whisper-only rows (language, GPU, vocabulary) are hidden
-  instead of greyed out, and the download log takes the free room.
-
-### Fixed
-- The Cancel button of the settings was not translated into Russian.
-- The Fedora package did not build: rpm's strip choked on the prebuilt ONNX Runtime library.
-
 ## [2.0.0] — 2026-10-22
 
 ### Added
@@ -64,12 +56,15 @@ and versions follow [Semantic Versioning](https://semver.org/).
 - The interface strings around the old single-pass recognition are gone: the transcription
   percentage, the silence filter switch, `ModelDownloader::current()` and `Recorder::isActive()`
   (unused).
+- Settings: with GigaAM or Parakeet the Whisper-only rows (language, GPU, vocabulary) are hidden,
+  and the download log takes the free room.
 
 ### Fixed
 - Silero VAD gave different results for the same recording: a new VAD context does not start
   from a zero state in whisper.cpp; Sotto now resets it.
 - Without ggml's CPU backend (a broken whisper.cpp install) Sotto stopped with an assertion; now
   Whisper reports it and phrases fall back to loudness detection.
+- The Cancel button of the settings was not translated into Russian.
 
 ## [1.2.5] — 2026-10-21
 
