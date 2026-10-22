@@ -28,6 +28,7 @@
 #include <QRadioButton>
 #include <QSpinBox>
 #include <QTabWidget>
+#include <QTimer>
 #include <QUrl>
 #include <QVBoxLayout>
 
@@ -39,15 +40,35 @@ static QLabel *hint(const QString &text)
     return label;
 }
 
-// A tab page: the form, then a stretch so it stays at the top, or, with `fill`, the form gets the
-// room the taller tabs need (for a field that grows, like the download log).
-static QWidget *page(QFormLayout *form, bool fill = false)
+// Tabs as tall as the open page: QTabWidget sizes itself (and its minimum) by the tallest one,
+// which leaves a short page like Recognition with an empty band at the bottom.
+class FittingTabs : public QTabWidget
+{
+public:
+    QSize sizeHint() const override { return fitted(QTabWidget::sizeHint(), &QWidget::sizeHint); }
+    QSize minimumSizeHint() const override { return fitted(QTabWidget::minimumSizeHint(), &QWidget::minimumSizeHint); }
+    // Height-for-width would again take the tallest page; the fitted size hint is enough here.
+    bool hasHeightForWidth() const override { return false; }
+
+private:
+    QSize fitted(QSize all, QSize (QWidget::*hint)() const) const
+    {
+        if (!currentWidget())
+            return all;
+        int tallest = 0;
+        for (int i = 0; i < count(); ++i)
+            tallest = std::max(tallest, (widget(i)->*hint)().height());
+        return {all.width(), all.height() - tallest + (currentWidget()->*hint)().height()};
+    }
+};
+
+// A tab page: the form, then a stretch so it stays at the top.
+static QWidget *page(QFormLayout *form)
 {
     auto *w = new QWidget;
     auto *l = new QVBoxLayout(w);
-    l->addLayout(form, fill ? 1 : 0);
-    if (!fill)
-        l->addStretch();
+    l->addLayout(form);
+    l->addStretch();
     return w;
 }
 
@@ -62,11 +83,12 @@ SettingsDialog::SettingsDialog(ModelDownloader *downloader, GlobalShortcut *shor
     setWindowIcon(QIcon::fromTheme(QString::fromLatin1(Config::AppId), QIcon(QStringLiteral(":/sotto.svg"))));
     setAttribute(Qt::WA_DeleteOnClose);
 
-    auto *tabs = new QTabWidget;
+    auto *tabs = new FittingTabs;
     tabs->setDocumentMode(true);
     tabs->addTab(recognitionPage(), tr("Recognition"));
     tabs->addTab(recordingPage(), tr("Recording and pasting"));
     tabs->addTab(generalPage(), tr("General"));
+    connect(tabs, &QTabWidget::currentChanged, this, &SettingsDialog::fitHeight);
     // tools/screenshots.sh opens the dialog on a given tab.
     tabs->setCurrentIndex(qEnvironmentVariableIntValue("SOTTO_SETTINGS_TAB"));
 
@@ -130,7 +152,7 @@ QWidget *SettingsDialog::recognitionPage()
 
     m_downloadLog = new QPlainTextEdit;
     m_downloadLog->setReadOnly(true);
-    m_downloadLog->setMinimumHeight(96);
+    m_downloadLog->setMaximumHeight(96);
     m_downloadLog->setLineWrapMode(QPlainTextEdit::NoWrap);
     m_downloadLog->setPlaceholderText(tr("The download log appears here: server, redirects, checksum."));
     m_downloadLog->setToolTip(tr("Also saved to %1").arg(Models::logFile()));
@@ -221,7 +243,7 @@ QWidget *SettingsDialog::recognitionPage()
             QMessageBox::warning(this, tr("Model download"), tr("Could not download the model:\n%1").arg(error));
         fillModels();
     });
-    return page(form, true);
+    return page(form);
 }
 
 QWidget *SettingsDialog::recordingPage()
@@ -447,7 +469,16 @@ void SettingsDialog::updateModelRow()
     for (QWidget *row : std::as_const(m_whisperRows))
         m_recognitionForm->setRowVisible(row, whisper);
     m_gpu->setEnabled(m_haveGpu);
+    fitHeight();
     updateSourceLink();
+}
+
+// After the layout has settled: as tall as the open tab needs, at the width the user left.
+void SettingsDialog::fitHeight()
+{
+    if (!isVisible())
+        return;
+    QTimer::singleShot(0, this, [this] { resize(width(), sizeHint().height()); });
 }
 
 void SettingsDialog::updateShortcutLabel()

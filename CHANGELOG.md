@@ -57,7 +57,7 @@ and versions follow [Semantic Versioning](https://semver.org/).
   percentage, the silence filter switch, `ModelDownloader::current()` and `Recorder::isActive()`
   (unused).
 - Settings: with GigaAM or Parakeet the Whisper-only rows (language, GPU, vocabulary) are hidden,
-  and the download log takes the free room.
+  and the window is as tall as the open tab instead of the tallest one.
 
 ### Fixed
 - Silero VAD gave different results for the same recording: a new VAD context does not start

@@ -37,6 +37,7 @@ private:
     void fillModels();
     void updateModelRow();
     void updateShortcutLabel();
+    void fitHeight();
     void updateSourceLink();
     void updatePasteAccess();
     QString selectedModel() const;
