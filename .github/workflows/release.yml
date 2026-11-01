@@ -26,7 +26,7 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Version
         id: version
@@ -63,7 +63,7 @@ jobs:
           pacman -Syu --noconfirm --needed cmake ninja python qt6-base qt6-multimedia qt6-wayland layer-shell-qt \
             whisper-cpp ggml ggml-vulkan wl-clipboard xdg-desktop-portal polkit hicolor-icon-theme
 
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Build as an unprivileged user
         run: |
@@ -99,7 +99,7 @@ jobs:
             python3 qt6-base-dev qt6-qpa-plugins qt6-multimedia-dev qt6-wayland-dev liblayershellqtinterface-dev libvulkan-dev \
             glslc spirv-headers
 
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Build
         run: packaging/deb/build.sh
@@ -129,7 +129,7 @@ jobs:
             qt6-qtbase-devel qt6-qtmultimedia-devel qt6-qtwayland-devel layer-shell-qt-devel \
             vulkan-loader-devel glslc spirv-headers-devel
 
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
@@ -166,7 +166,7 @@ jobs:
     needs: source
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Build
         run: sudo SOTTO_SRC="$PWD" SOTTO_WORK="$RUNNER_TEMP/sotto" bash packaging/appimage/inside.sh
@@ -198,7 +198,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
