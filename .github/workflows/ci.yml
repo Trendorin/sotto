@@ -24,7 +24,7 @@ jobs:
           pacman -Syu --noconfirm --needed cmake ninja python qt6-base qt6-multimedia qt6-wayland layer-shell-qt \
             whisper-cpp ggml appstream desktop-file-utils
 
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: sherpa-onnx (pinned, checked against its SHA-256)
         run: packaging/fetch-sherpa.sh "$RUNNER_TEMP/sherpa"
@@ -70,7 +70,7 @@ jobs:
       - name: What the checkout step needs
         run: if command -v zypper >/dev/null; then zypper -n install tar gzip findutils; fi
 
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # A fresh system: install.sh itself has to bring in every package it needs, and outside Arch
       # it builds the pinned whisper.cpp.
